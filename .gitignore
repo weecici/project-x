@@ -1,0 +1,45 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+.venv
+tmp/
+
+# Environment / secrets
+.env
+.idea/
+.vscode/
+*.swp
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# Lake data (written locally during dev, not tracked)
+data/
+*.parquet
+*.snappy
+
+# MLflow tracking (Phase 8)
+mlruns/
+mlartifacts/
+
+# Docker volumes (if bind-mounted)
+kafka-data/
+minio-data/
+
+# Spark (Phase 2+)
+derby.log
+metastore_db/
+spark-warehouse/
