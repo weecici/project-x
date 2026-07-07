@@ -1,0 +1,71 @@
+site_name: My Python Project
+site_description: Professional documentation for your Python project
+site_author: Your Name
+repo_url: https://github.com/yourusername/your-project
+repo_name: your-project
+edit_uri: edit/main/docs/
+
+theme:
+  name: mkdocs
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          import_statement: from my_project import
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Guides:
+    - Basic Usage: guides/basic-usage.md
+    - Advanced Features: guides/advanced.md
+    - Configuration: guides/configuration.md
+  - API Reference:
+    - Overview: architecture/overview.md
+    - Core Module: architecture/core.md
+  - FAQ: faq.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
