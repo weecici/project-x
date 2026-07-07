@@ -53,7 +53,7 @@ uv run run-lake-writer
 
 ## Architecture
 
-Phase 1 directory structure (built — see `wiki/structure/project-structure.md` for full layout):
+Phase 1 directory structure (built — see `.wiki/structure/project-structure.md` for full layout):
 
 ```
 ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
@@ -72,18 +72,18 @@ observability/   → Prometheus + Grafana configs (Phase 7)
 infra/           → Docker Swarm + K8s manifests (Phase 10)
 ```
 
-Follow the 10-phase build order in `wiki/structure/phase.md`.
+Follow the 10-phase build order in `.wiki/structure/phase.md`.
 
 ## Wiki
 
-`wiki/` is LLM-owned documentation. Read it for context; the LLM creates and updates pages.
+`.wiki/` is LLM-owned documentation. Read it for context; the LLM creates and updates pages.
 
-- `wiki/INDEX.md` — content catalog of all wiki pages (read this first to find relevant docs)
-- `wiki/LOG.md` — chronological record of wiki changes
-- `wiki/architecture/` — system architecture and component breakdown
-- `wiki/structure/` — project structure and phased build order
+- `.wiki/INDEX.md` — content catalog of all wiki pages (read this first to find relevant docs)
+- `.wiki/LOG.md` — chronological record of wiki changes
+- `.wiki/architecture/` — system architecture and component breakdown
+- `.wiki/structure/` — project structure and phased build order
 
-When answering project questions, check `wiki/INDEX.md` first, then drill into referenced pages.
+When answering project questions, check `.wiki/INDEX.md` first, then drill into referenced pages.
 
 ## Coding standards
 
