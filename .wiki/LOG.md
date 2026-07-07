@@ -54,5 +54,18 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 **Toolchain**
 - Installed runtime deps: `confluent-kafka`, `websockets`, `pydantic`, `pydantic-settings`, `pyarrow`, `boto3`, `loguru`, `tenacity`, `rich`
 - Installed dev deps: `ruff`, `mypy`, `pytest`, `pytest-asyncio`, `pytest-cov`, `testcontainers[kafka,minio]`, `pre-commit`, `boto3-stubs[s3]`
-- Updated `pyproject.toml` — full tool config (ruff 88-char, double quotes; mypy strict; pytest asyncio auto)
-- Updated `.gitignore` — added `.env`, Parquet, pytest/mypy caches, MLflow dirs
+- Updated pyproject.toml — full tool config (ruff 88-char, double quotes; mypy strict; pytest asyncio auto)
+- Updated .gitignore — added .env, Parquet, pytest/mypy caches, MLflow dirs
+
+## [2026-07-07] layout-refactor | src layout & clean structure
+
+**Structure Assessment & Packaging**
+- Moved `ingestion/` to `src/ingestion/` to adopt standard Python packaging `src/` layout (see ADR-005).
+- Relocated future python packages (`batch`, `streaming`, `ml`, `orchestration`) under `src/` to isolate code from tool config files in the project root.
+- Grouped Swarm, Kubernetes, Prometheus/Grafana dashboards, and metadata configurations under a single nested `infra/` folder.
+- Configured namespace packaging in `pyproject.toml` with `uv_build` backend.
+
+**Wiki**
+- Created `adr-005-src-layout.md` explaining the layout refactoring.
+- Updated `project-structure.md` in the wiki to document the standard `src/` layout.
+- Corrected decisions folder paths in `phase.md` and `INDEX.md`.

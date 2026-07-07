@@ -32,23 +32,17 @@ docker compose up -d              # start Kafka, MinIO, kafka-ui
 docker compose stop kafka-ui      # free RAM when not needed
 docker compose ps                 # check service health
 
-# Lint + type check
-uv run ruff check .               # lint
-uv run ruff format .              # format
-uv run mypy .                     # type check
+# Lint + type check via Just or directly
+pre-commit run
+
+# Run ingestion (Phase 1)
+uv run produce
+uv run write-lake
 
 # Tests
 uv run pytest tests/unit/ -v                # fast, no Docker required
 uv run pytest tests/integration/ -v        # requires Docker daemon
 uv run pytest tests/e2e/ -v -m e2e         # requires full compose stack + running processes
-
-# Run ingestion (Phase 1)
-uv run python ingestion/run_producer.py     # Binance WS → Kafka
-uv run python ingestion/run_lake_writer.py  # Kafka → MinIO bronze
-
-# Or via project scripts
-uv run run-producer
-uv run run-lake-writer
 ```
 
 ## Architecture
@@ -56,20 +50,20 @@ uv run run-lake-writer
 Phase 1 directory structure (built — see `.wiki/structure/project-structure.md` for full layout):
 
 ```
-ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
+src/ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
 tests/           → unit / integration (testcontainers) / e2e
-wiki/decisions/  → Architecture Decision Records (ADR-001 through ADR-004)
+.wiki/decisions/ → Architecture Decision Records (ADR-001 through ADR-005)
 ```
 
 **Planned** (future phases):
 ```
-batch/           → PySpark backfill + feature history (Phase 2)
-dbt_project/     → silver → gold SQL models (Phase 3)
-streaming/       → Flink windowed aggregation jobs (Phase 4)
-ml/              → features, training, optimization, serving (Phases 8–9)
-orchestration/   → Airflow DAGs (Phase 6)
-observability/   → Prometheus + Grafana configs (Phase 7)
-infra/           → Docker Swarm + K8s manifests (Phase 10)
+src/batch/           → PySpark backfill + feature history (Phase 2)
+dbt_project/         → silver → gold SQL models (Phase 3)
+src/streaming/       → Flink windowed aggregation jobs (Phase 4)
+src/ml/              → features, training, optimization, serving (Phases 8–9)
+src/orchestration/   → Airflow DAGs (Phase 6)
+infra/observability/ → Prometheus + Grafana configs (Phase 7)
+infra/               → Docker Swarm + K8s manifests (Phase 10)
 ```
 
 Follow the 10-phase build order in `.wiki/structure/phase.md`.

@@ -24,3 +24,4 @@ Content catalog of all wiki pages. Read this first to find relevant docs, then d
 | [decisions/adr-002-confluent-kafka.md](decisions/adr-002-confluent-kafka.md) | `confluent-kafka` as Python Kafka client — librdkafka-backed, asyncio GA 2026 |
 | [decisions/adr-003-phase1-no-flink.md](decisions/adr-003-phase1-no-flink.md) | Flink deferred to Phase 4 — Phase 1 uses Python LakeWriter directly |
 | [decisions/adr-004-gpu-profile.md](decisions/adr-004-gpu-profile.md) | RTX 3050 Ti (4 GB VRAM, CUDA 13.3, sm_86) used in Phases 8–9 for training + serving |
+| [decisions/adr-005-src-layout.md](decisions/adr-005-src-layout.md) | `src/` directory layout — prevents accidental imports, conforms to standard Python packaging best practices |

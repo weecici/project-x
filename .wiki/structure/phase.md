@@ -13,4 +13,4 @@
 | **9** | **ML Serving (3-way)** | Triton (GPU), BentoML, FastAPI, Locust | All 3 serving paths live; Locust load-test; latency/throughput in Grafana |
 | **10** | **CI/CD + Deploy + Polish** | GitHub Actions, Docker Swarm | GH Actions pipeline; Swarm MVP; K8s manifests; README; ADRs; Doris comparison note; demo GIF |
 
-> See `wiki/decisions/` for Architecture Decision Records explaining key choices.
+> See `.wiki/decisions/` for Architecture Decision Records explaining key choices.
