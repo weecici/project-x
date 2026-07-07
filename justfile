@@ -1,8 +1,8 @@
 pc:
-    pre-commit run --all-files
+    pre-commit run
 
-producer:
-    PYTHONPATH=. uv run ingestion/run_producer.py
+produce:
+    uv run produce
 
-lake-writer:
-    PYTHONPATH=. uv run ingestion/run_lake_writer.py
+write-lake:
+    uv run write-lake
