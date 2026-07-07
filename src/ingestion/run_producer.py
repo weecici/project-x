@@ -1,7 +1,7 @@
 """Entrypoint for the Binance WebSocket → Kafka producer.
 
 Run with:
-    uv run ingestion/run_producer.py
+    uv run produce
 """
 
 from __future__ import annotations
