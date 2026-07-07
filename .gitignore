@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 
 .venv
-tmp/
+*tmp*
 
 # Environment / secrets
 .env
@@ -15,15 +15,11 @@ tmp/
 .vscode/
 *.swp
 
-# Pytest / coverage
-.pytest_cache/
-.coverage
+# Cache
 htmlcov/
-
-# Mypy
+.coverage
+.pytest_cache/
 .mypy_cache/
-
-# ruff
 .ruff_cache/
 
 # Lake data (written locally during dev, not tracked)
@@ -34,10 +30,6 @@ data/
 # MLflow tracking (Phase 8)
 mlruns/
 mlartifacts/
-
-# Docker volumes (if bind-mounted)
-kafka-data/
-minio-data/
 
 # Spark (Phase 2+)
 derby.log
