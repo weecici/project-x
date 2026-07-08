@@ -13,7 +13,7 @@ from loguru import logger
 
 from ingestion.config import IngestionConfig
 from ingestion.producer.ws_client import BinanceWSProducer
-from ingestion.utils.logging import configure_logging
+from utils.logging import configure_logging
 
 
 async def main() -> None:

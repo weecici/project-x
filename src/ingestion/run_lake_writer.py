@@ -11,8 +11,8 @@ import sys
 from loguru import logger
 
 from ingestion.config import IngestionConfig
-from ingestion.utils.logging import configure_logging
 from ingestion.writer.lake_writer import LakeWriter
+from utils.logging import configure_logging
 
 
 def main() -> None:

@@ -11,7 +11,6 @@ import sys
 
 from loguru import logger
 
-# Re-export logger so callers only need to import from this module.
 __all__ = ["configure_logging", "logger"]
 
 
@@ -27,7 +26,6 @@ def configure_logging(*, level: str = "INFO", serialize: bool = True) -> None:
     logger.add(
         sys.stderr,
         level=level,
-        # Human-readable format is used as the ``text`` field in JSON output.
         format=(
             "<green>{time:YYYY-MM-DDTHH:mm:ss.SSS}Z</green> | "
             "<level>{level:<8}</level> | "

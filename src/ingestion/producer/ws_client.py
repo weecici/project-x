@@ -22,7 +22,7 @@ from pydantic import ValidationError
 
 from ingestion.config import IngestionConfig
 from ingestion.models import KlineEvent, TradeEvent
-from ingestion.utils.retry import async_retry
+from utils.retry import async_retry
 
 if TYPE_CHECKING:
     pass

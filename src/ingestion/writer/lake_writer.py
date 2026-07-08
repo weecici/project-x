@@ -23,15 +23,14 @@ import signal
 import uuid
 from datetime import UTC, datetime
 
-import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
-from botocore.config import Config
 from confluent_kafka import Consumer, KafkaError, KafkaException, Message
 from loguru import logger
 from mypy_boto3_s3 import S3Client
 
 from ingestion.config import IngestionConfig
+from utils.storage import make_s3_client
 
 
 class LakeWriter:
@@ -56,12 +55,10 @@ class LakeWriter:
                 "enable.auto.commit": False,
             }
         )
-        self._s3: S3Client = boto3.client(
-            "s3",
-            endpoint_url=config.minio_endpoint,
-            aws_access_key_id=config.minio_access_key,
-            aws_secret_access_key=config.minio_secret_key,
-            config=Config(signature_version="s3v4"),
+        self._s3: S3Client = make_s3_client(
+            endpoint=config.minio_endpoint,
+            access_key=config.minio_access_key,
+            secret_key=config.minio_secret_key,
         )
         self._topics = [config.kafka_topic_trades, config.kafka_topic_klines]
         self._buffers: dict[str, list[dict[str, object]]] = {
