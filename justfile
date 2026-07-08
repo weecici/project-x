@@ -1,5 +1,5 @@
 pc:
-    pre-commit run
+    uv run pre-commit run
 
 check:
     uv run ruff check .
