@@ -51,13 +51,13 @@ uv run pytest tests/e2e/ -v -m e2e         # requires full compose stack + runni
 
 ## Architecture
 
-Phase 1 directory structure (built — see `.wiki/structure/project-structure.md` for full layout):
+Phase 1 directory structure (built — see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
 src/ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
 src/utils/           → shared cross-phase utilities (logging, retry, S3 factory)
 tests/               → unit / integration (testcontainers) / e2e
-.wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-008)
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-008)
 ```
 
 **Phase 2 (in progress)**:
@@ -76,18 +76,18 @@ infra/observability/ → Prometheus + Grafana configs (Phase 7)
 infra/               → Docker Swarm + K8s manifests (Phase 10)
 ```
 
-Follow the 10-phase build order in `.wiki/structure/phase.md`.
+Follow the 10-phase build order in `.agents/wiki/structure/phase.md`.
 
 ## Wiki
 
-`.wiki/` is LLM-owned documentation. Read it for context; the LLM creates and updates pages.
+`.agents/wiki/` is LLM-owned documentation. Read it for context; the LLM creates and updates pages.
 
-- `.wiki/INDEX.md` — content catalog of all wiki pages (read this first to find relevant docs)
-- `.wiki/LOG.md` — chronological record of wiki changes
-- `.wiki/architecture/` — system architecture and component breakdown
-- `.wiki/structure/` — project structure and phased build order
+- `.agents/wiki/INDEX.md` — content catalog of all wiki pages (read this first to find relevant docs)
+- `.agents/wiki/LOG.md` — chronological record of wiki changes
+- `.agents/wiki/architecture/` — system architecture and component breakdown
+- `.agents/wiki/structure/` — project structure and phased build order
 
-When answering project questions, check `.wiki/INDEX.md` first, then drill into referenced pages.
+When answering project questions, check `.agents/wiki/INDEX.md` first, then drill into referenced pages.
 
 ## Coding standards
 
