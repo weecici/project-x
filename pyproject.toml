@@ -5,7 +5,7 @@ description = "End-to-end crypto analytics platform: live + batch ingestion, lak
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "boto3>=1.43.40",
+  "boto3>=1.43.42",
   "confluent-kafka>=2.15.0",
   "httpx>=0.28.0",
   "loguru>=0.7.3",
