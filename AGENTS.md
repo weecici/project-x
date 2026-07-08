@@ -4,7 +4,7 @@
 
 Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model. See `GUIDE.md` for the full 311-line blueprint.
 
-**Current state**: Pre-build planning phase. No application code, dependencies, tests, or infrastructure configured yet. The repo contains only planning docs and wiki.
+**Current state**: Phase 1 complete. Phase 2 (Batch + Lake Maturation) in progress.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -36,8 +36,12 @@ docker compose ps                 # check service health
 pre-commit run
 
 # Run ingestion (Phase 1)
-uv run produce
-uv run write-lake
+uv run produce                              # Binance WebSocket → Kafka producer
+uv run write-lake                           # Kafka → bronze
+
+# Run batch (Phase 2)
+uv run backfill                             # REST historical → bronze Parquet
+uv run silver                               # PySpark bronze → silver (dedup, cast, partition)
 
 # Tests
 uv run pytest tests/unit/ -v                # fast, no Docker required
@@ -51,8 +55,14 @@ Phase 1 directory structure (built — see `.wiki/structure/project-structure.md
 
 ```
 src/ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
-tests/           → unit / integration (testcontainers) / e2e
-.wiki/decisions/ → Architecture Decision Records (ADR-001 through ADR-005)
+src/utils/           → shared cross-phase utilities (logging, retry, S3 factory)
+tests/               → unit / integration (testcontainers) / e2e
+.wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-008)
+```
+
+**Phase 2 (in progress)**:
+```
+src/batch/           → REST historical backfill → bronze; PySpark silver transformer
 ```
 
 **Planned** (future phases):
