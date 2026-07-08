@@ -69,3 +69,39 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 - Created `adr-005-src-layout.md` explaining the layout refactoring.
 - Updated `project-structure.md` in the wiki to document the standard `src/` layout.
 - Corrected decisions folder paths in `phase.md` and `INDEX.md`.
+
+## [2026-07-07] phase-2 | Batch + Lake Maturation
+
+**Structural fixes**
+- Moved `src/ingestion/utils/logging.py` and `retry.py` to `src/utils/` (new cross-phase utility package); deleted `ingestion/utils/`.
+- Created `src/utils/storage.py` — shared `make_s3_client()` factory used by both `ingestion.writer` and `batch.backfill`.
+- Updated all import paths in `ws_client.py`, `run_producer.py`, `run_lake_writer.py`, `lake_writer.py`.
+- Fixed `--cov=src` in `pyproject.toml` (was `--cov=ingestion`).
+- Fixed stale AGENTS.md state line; added Phase 2 commands and architecture block.
+- Added Phase 2 env vars to `.env.example`.
+
+**Batch package — `src/batch/`**
+- Created `batch/config.py` — `BatchConfig` with Binance REST, MinIO, and PySpark settings; `backfill_start_date` validated as ISO-8601.
+- Created `batch/models.py` — `KlineRow` with `from_api_list()` classmethod; `Decimal` precision; frozen model.
+- Created `batch/backfill/binance_rest.py` — async paginated REST fetcher; weight-header rate-limit guard; chunk-by-chunk Parquet write to bronze; uses `utils.retry.async_retry`.
+- Created `batch/silver/kline_transformer.py` — PySpark `local[*]`; explicit schema read; Decimal casting; window dedup on `(symbol, interval, open_time)`; rejected rows to `silver/klines_rejected/`; partitioned Snappy Parquet write.
+- Created `batch/run_backfill.py` + `batch/run_silver.py` — CLI entrypoints (`uv run backfill`, `uv run silver`).
+
+**Dependencies added**
+- Runtime: `httpx>=0.28.0`, `pyspark>=3.5.0` (installed: 4.1.2)
+- Dev: `pytest-httpx>=0.35.0`
+
+**Tests**
+- Created `tests/unit/utils/test_retry.py` — 3 tests for `async_retry` (success, transient recovery, exhaustion).
+- Created `tests/unit/batch/test_batch_config.py` — 7 tests for `BatchConfig`.
+- Created `tests/unit/batch/test_batch_models.py` — 5 tests for `KlineRow.from_api_list`.
+- Created `tests/unit/batch/test_binance_rest.py` — 4 tests for `fetch_klines` using `pytest-httpx` mocks.
+- Created `tests/integration/test_silver_spark.py` — PySpark silver job integration test (testcontainers MinIO).
+- Created `tests/e2e/test_phase2_backfill.py` — full pipeline E2E (REST → bronze → silver).
+
+**Wiki**
+- Created ADR-006 (`src/utils/` package rationale).
+- Created ADR-007 (PySpark `local[*]` mode + Delta Lake deferral).
+- Created ADR-008 (`httpx` over `requests`/`aiohttp`).
+- Updated `project-structure.md` to reflect Phase 2 full layout.
+- Updated `INDEX.md` with ADRs 006–008.
