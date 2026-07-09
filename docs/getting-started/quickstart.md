@@ -1,95 +1,96 @@
 # Quick Start
 
-Get up and running in 5 minutes!
+Get the full pipeline running in 5 minutes.
 
-## Basic Usage
+## Step 1: Start Infrastructure
 
-### Import and Initialize
-
-```python
-from my_project import MyClass
-
-# Create an instance
-obj = MyClass()
+```bash
+docker compose up -d
 ```
 
-### Perform Basic Operation
+Wait ~15 seconds for Kafka and MinIO to become healthy.
 
-```python
-# Do something
-result = obj.do_something(param="value")
-print(result)
-# Output: Your result here
+## Step 2: Run the Live Ingestion Pipeline
+
+Start the Binance WebSocket producer (streams live trades and klines to Kafka):
+
+```bash
+uv run produce
 ```
 
-### Configure Settings
+In a separate terminal, start the lake writer (consumes from Kafka, writes Parquet to MinIO):
 
-```python
-from my_project import MyClass, Config
-
-config = Config(
-    debug=True,
-    max_workers=4,
-    timeout=30
-)
-
-obj = MyClass(config=config)
+```bash
+uv run write-lake
 ```
 
-## Common Patterns
+After 30 seconds, you should see log messages indicating Parquet files are being flushed to the `bronze` bucket.
 
-### Working with Data
+## Step 3: Run the Batch Pipeline
 
-```python
-from my_project import DataProcessor
+Backfill historical kline data from the Binance REST API:
 
-processor = DataProcessor()
-
-# Process data
-data = [1, 2, 3, 4, 5]
-processed = processor.process(data)
+```bash
+uv run backfill
 ```
 
-### Error Handling
+Then transform the raw bronze data into a clean, deduplicated silver layer:
 
-```python
-from my_project import MyClass, ValidationError
-
-obj = MyClass()
-
-try:
-    result = obj.do_something(param="invalid")
-except ValidationError as e:
-    print(f"Error: {e}")
+```bash
+uv run silver
 ```
 
-### Using Context Managers
+## Step 4: Verify
 
-```python
-from my_project import ResourceManager
+Open the MinIO console at [http://localhost:9001](http://localhost:9001) (login: `minioadmin` / `minioadmin`) and browse the `bronze` and `silver` buckets.
 
-with ResourceManager() as manager:
-    manager.initialize()
-    result = manager.execute()
-    # Automatically cleaned up
+You should see Hive-partitioned Parquet files:
+
+```
+bronze/
+  trades/symbol=BTCUSDT/year=2026/month=07/day=09/<uuid>.parquet
+  klines/symbol=BTCUSDT/interval=1m/year=2026/month=07/day=09/<uuid>.parquet
+silver/
+  klines/symbol=BTCUSDT/interval=1m/year=2026/month=07/<uuid>.parquet
 ```
 
-## Examples
+## What Just Happened
 
-Check out the [examples directory](https://github.com/yourusername/my-project/tree/main/examples) for more:
+```mermaid
+sequenceDiagram
+    participant Binance
+    participant Producer as uv run produce
+    participant Kafka
+    participant LakeWriter as uv run write-lake
+    participant MinIO
 
-- `example_basic.py` - Basic usage
-- `example_advanced.py` - Advanced features
-- `example_integration.py` - Integration patterns
+    Binance->>Producer: WebSocket (live trades/klines)
+    Producer->>Kafka: Publish to raw.trades, raw.klines
+    Kafka->>LakeWriter: Consume messages
+    LakeWriter->>MinIO: Write bronze Parquet (every 30s or 1000 rows)
+
+    participant Backfill as uv run backfill
+    participant Silver as uv run silver
+
+    Backfill->>Binance: REST API (historical klines)
+    Backfill->>MinIO: Write bronze Parquet (chunked)
+    Silver->>MinIO: Read bronze → dedup + cast → write silver
+```
+
+## All Commands
+
+| Command | What it does |
+|---------|-------------|
+| `uv run produce` | Start live Binance WS → Kafka producer |
+| `uv run write-lake` | Start Kafka → MinIO bronze writer |
+| `uv run backfill` | Backfill historical klines via REST API |
+| `uv run silver` | Run PySpark bronze → silver transformation |
+| `uv run pytest tests/unit/ -v` | Run unit tests |
+| `uv run pytest tests/integration/ -v` | Run integration tests (needs Docker) |
+| `uv run pytest tests/e2e/ -v -m e2e` | Run end-to-end tests (needs full stack) |
 
 ## Next Steps
 
-- [Basic Usage Guide](../guides/basic-usage.md)
-- [Advanced Features](../guides/advanced.md)
-- [Architecture](../architecture/overview.md)
-
-## Need Help?
-
-- Check the [FAQ](../faq.md)
-- Browse [Architecture](../architecture/overview.md)
-- Open an [Issue](https://github.com/yourusername/my-project/issues)
+- [Configuration Guide](../guides/configuration.md) — Customize symbols, intervals, flush thresholds
+- [Running the Pipeline](../guides/running-the-pipeline.md) — Detailed operational guide
+- [Architecture](../architecture/overview.md) — Understand the system design

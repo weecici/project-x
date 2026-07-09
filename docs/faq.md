@@ -1,234 +1,137 @@
 # FAQ
 
-Frequently asked questions about the project.
+## General
 
-## Installation & Setup
+### What is this project?
 
-### Q: What Python versions are supported?
+A crypto market intelligence platform that ingests live and historical data from Binance, stores it in a lakehouse (Bronze → Silver → Gold), and eventually serves analytics via OLAP and ML price-movement predictions.
 
-A: Python 3.8 or higher. We test on 3.8, 3.9, 3.10, 3.11, and 3.12.
+### What phase is the project in?
 
-### Q: Can I use this in production?
+Phase 2 (Batch + Lake Maturation) is complete. Phases 1–2 cover data ingestion and storage. Phases 3–10 cover analytics, ML, and production deployment.
 
-A: Yes! The project is production-ready and used by many organizations. We follow semantic versioning and maintain backward compatibility within major versions.
+### What cryptocurrencies are supported?
 
-### Q: How do I install the development version?
+Any pair listed on Binance. Defaults are BTCUSDT and ETHUSDT, but you can configure any symbol via `INGESTION_SYMBOLS` or `BACKFILL_SYMBOLS`.
 
-A: Clone the repository and install in editable mode:
+## Infrastructure
 
-```bash
-git clone https://github.com/yourusername/my-project.git
-cd my-project
-pip install -e ".[dev]"
-```
+### Why Kafka + MinIO instead of just a database?
 
-### Q: What are the optional dependencies?
+The lakehouse architecture (Kafka → S3/Parquet) provides:
 
-A: Optional dependency groups:
-- `[dev]` - Development tools
-- `[data-science]` - Data science features
-- `[all]` - All optional dependencies
+- **Scalability**: Parquet files scale to petabytes
+- **Cost**: Object storage is cheap
+- **Flexibility**: Same data serves OLAP, ML, and batch analytics
+- **Durability**: Kafka provides durable buffering; MinIO provides persistent storage
 
-## Usage Questions
+### Why KRaft mode instead of ZooKeeper?
 
-### Q: How do I configure the library?
+KRaft is Kafka's built-in metadata management (since Kafka 3.3). It eliminates the ZooKeeper dependency, simplifying the deployment to a single container.
 
-A: Use the `Config` class:
+### Why PySpark for batch processing?
 
-```python
-from my_project import Config, MyClass
+PySpark handles:
 
-config = Config(debug=True, max_workers=8)
-obj = MyClass(config=config)
-```
+- Large-scale deduplication and joins
+- Partitioned writes to Parquet
+- Hive-compatible metadata
+- Local mode for development (no cluster needed)
 
-See the [Configuration Guide](guides/configuration.md) for more details.
+## Configuration
 
-### Q: How do I handle errors?
+### How do I add a new trading pair?
 
-A: Catch specific exceptions:
-
-```python
-from my_project import ValidationError, ProcessingError
-
-try:
-    result = obj.process(data)
-except ValidationError:
-    print("Invalid input")
-except ProcessingError:
-    print("Processing failed")
-```
-
-### Q: Is the library thread-safe?
-
-A: Yes, all public APIs are thread-safe. Configuration is thread-safe for reads but not writes.
-
-### Q: How do I use async operations?
-
-A: Use the async module:
-
-```python
-import asyncio
-from my_project.async_ops import AsyncProcessor
-
-async def main():
-    processor = AsyncProcessor()
-    result = await processor.process_async(data)
-
-asyncio.run(main())
-```
-
-### Q: Can I cache results?
-
-A: Yes, enable caching in configuration:
-
-```python
-config = Config(cache_enabled=True)
-```
-
-See [Configuration Guide](guides/configuration.md) for cache options.
-
-## Performance
-
-### Q: How can I improve performance?
-
-A: Tips for better performance:
-
-1. Use batch processing for large datasets
-2. Enable caching
-3. Configure appropriate number of workers
-4. Use async operations for I/O-bound tasks
-5. Profile your code with the built-in `Profiler`
-
-### Q: What's the performance overhead?
-
-A: Minimal. The library is optimized for speed. Typical overhead is <5% for most operations.
-
-### Q: How do I profile my code?
-
-A:
-```python
-from my_project import Profiler
-
-profiler = Profiler()
-profiler.start()
-
-# Your code here
-obj.process(data)
-
-profiler.stop()
-profiler.report()
-```
-
-## Contributing
-
-### Q: How do I contribute?
-
-A: Follow the [Contributing Guide]():
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Write tests
-5. Submit a pull request
-
-### Q: What's the development setup?
-
-A: Install development dependencies:
+Set the `INGESTION_SYMBOLS` environment variable:
 
 ```bash
-pip install -e ".[dev]"
-pre-commit install
-pytest
+export INGESTION_SYMBOLS='["BTCUSDT", "ETHUSDT", "SOLUSDT"]'
 ```
 
-### Q: Do I need to run tests before submitting a PR?
+Or add it to your `.env` file.
 
-A: Yes, all tests must pass:
+### How do I change the kline interval?
+
+Set `INGESTION_INTERVALS`:
 
 ```bash
-pytest
+export INGESTION_INTERVALS='["1m", "5m", "1h"]'
 ```
+
+### Where are credentials stored?
+
+In the `.env` file (git-ignored). Default MinIO credentials are `minioadmin` / `minioadmin`. For production, use proper secrets management.
+
+## Development
+
+### How do I run tests?
+
+```bash
+# Unit tests (no Docker)
+uv run pytest tests/unit/ -v
+
+# Integration tests (Docker required)
+uv run pytest tests/integration/ -v
+
+# End-to-end tests (full stack)
+uv run pytest tests/e2e/ -v -m e2e
+```
+
+### How do I add a new Pydantic model?
+
+1. Define the model in the appropriate `models.py`
+2. Use `ConfigDict(populate_by_name=True)` for field aliases
+3. Use `Literal` types for discriminated unions
+4. Write unit tests for validation
+
+### How do I add a new CLI command?
+
+1. Create `src/<package>/run_<command>.py`
+2. Implement `main()` function
+3. Register in `pyproject.toml` under `[project.scripts]`
+
+### What pre-commit hooks are enforced?
+
+- `ruff check` + `ruff format` (linting + formatting)
+- `mypy --strict` (type checking)
+- Trailing whitespace removal
+- End-of-file fixer
+- YAML/TOML validation
 
 ## Troubleshooting
 
-### Q: I get a `ModuleNotFoundError`
+### Kafka won't start
 
-A: Make sure you've installed the package:
-
-```bash
-pip install my-project
-```
-
-Or for development:
+Check if port 9094 is already in use:
 
 ```bash
-pip install -e ".[dev]"
+lsof -i :9094
 ```
 
-### Q: Configuration doesn't seem to work
+### MinIO won't start
 
-A: Verify your configuration:
+Check if ports 9000/9001 are in use:
 
-```python
-config = Config(debug=True)
-print(config)  # Check values
-obj = MyClass(config=config)
+```bash
+lsof -i :9000
+lsof -i :9001
 ```
 
-### Q: My code is slow
+### PySpark fails with Java error
 
-A: Try these optimizations:
+Ensure Java 11+ is installed:
 
-1. Enable caching: `Config(cache_enabled=True)`
-2. Use batch processing
-3. Increase workers: `Config(max_workers=8)`
-4. Profile with `Profiler`
+```bash
+java -version
+```
 
-### Q: How do I report a bug?
+### Rate limiting errors (429)
 
-A: Open an issue with:
-- Clear description
-- Steps to reproduce
-- Python version
-- Error message and traceback
+The backfiller has built-in rate limiting. If you see 429 errors:
 
-## Community
+- Reduce `BACKFILL_CHUNK_DAYS` to smaller chunks
+- The retry mechanism handles transient errors automatically
 
-### Q: Where can I ask questions?
+### Data duplication in bronze
 
-A: Join our community:
-- [GitHub Discussions](https://github.com/yourusername/my-project/discussions)
-- [GitHub Issues](https://github.com/yourusername/my-project/issues) (for bugs)
-
-### Q: Is there a Discord/Slack community?
-
-A: Yes! Join our [Discord Server](#) to chat with other users.
-
-### Q: How can I stay updated?
-
-A: Follow releases and news:
-- [GitHub Releases](https://github.com/yourusername/my-project/releases)
-- [Twitter/X](https://twitter.com/yourhandle)
-- [Newsletter](#)
-
-## License & Legal
-
-### Q: What's the license?
-
-A: MIT License. See [LICENSE](https://github.com/yourusername/my-project/blob/main/LICENSE) for details.
-
-### Q: Can I use this commercially?
-
-A: Yes! MIT license allows commercial use.
-
-### Q: Do I need to cite this project?
-
-A: Not required but appreciated! A link to the repo is nice.
-
-## More Help
-
-- [Installation Guide](getting-started/installation.md)
-- [Quick Start](getting-started/quickstart.md)
-- [API Reference](architecture/overview.md)
-- [GitHub Issues](https://github.com/yourusername/my-project/issues)
+This is by design. UUID-based filenames prevent the **lake writer** from writing duplicates, but the bronze layer may contain overlapping data from different sources. The **silver layer** handles deduplication.

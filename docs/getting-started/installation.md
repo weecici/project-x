@@ -1,107 +1,100 @@
 # Installation
 
-## Requirements
-
-- Python 3.8 or higher
-- pip or Poetry
-
-## From PyPI (Recommended)
-
-Install the latest stable version:
+## Clone the Repository
 
 ```bash
-pip install my-project
+git clone https://github.com/yourusername/crypto-platform.git
+cd crypto-platform
 ```
 
-### Specific Version
+## Install Dependencies
+
+The project uses [uv](https://docs.astral.sh/uv/) as its package manager.
 
 ```bash
-pip install my-project==1.0.0
+# Install all runtime + dev dependencies
+uv sync
 ```
 
-### With Optional Dependencies
+This creates a `.venv/` directory and installs everything defined in `pyproject.toml`.
+
+## Install Pre-commit Hooks
 
 ```bash
-# For data science features
-pip install my-project[data-science]
-
-# For all optional dependencies
-pip install my-project[all]
-
-# For development
-pip install my-project[dev]
+pre-commit install
 ```
 
-## From Source
+This sets up automatic linting (ruff) and type checking (mypy) on every commit.
 
-Clone the repository and install in development mode:
+## Start Infrastructure
+
+The platform requires Apache Kafka and MinIO (S3-compatible storage) running locally via Docker:
 
 ```bash
-git clone https://github.com/yourusername/my-project.git
-cd my-project
-pip install -e ".[dev]"
+docker compose up -d
 ```
+
+Verify all services are healthy:
+
+```bash
+docker compose ps
+```
+
+Expected output:
+
+```
+NAME                    STATUS          PORTS
+platform-kafka          running         0.0.0.0:9094->9094/tcp
+platform-kafka-ui       running         0.0.0.0:8080->8080/tcp
+platform-minio          running         0.0.0.0:9000->9000/tcp, 0.0.0.0:9001->9001/tcp
+```
+
+## Configure Environment
+
+Copy the example environment file and adjust if needed:
+
+```bash
+cp .env.example .env
+```
+
+The defaults work out of the box for local development. See the [Configuration Guide](../guides/configuration.md) for all available options.
 
 ## Verify Installation
 
-Confirm everything is working:
-
-```python
->>> import my_project
->>> my_project.__version__
-'1.0.0'
-```
-
-## Using Poetry
-
-If you use Poetry:
+Run the unit tests to confirm everything works:
 
 ```bash
-poetry add my-project
+uv run pytest tests/unit/ -v
 ```
 
-Or add to `pyproject.toml`:
-
-```toml
-[tool.poetry.dependencies]
-python = "^3.8"
-my-project = "^1.0.0"
-```
-
-Then run:
-
-```bash
-poetry install
-```
+All tests should pass without requiring Docker or any external services.
 
 ## Troubleshooting
 
-### ModuleNotFoundError
+### Docker services won't start
 
-Make sure you're using the correct Python interpreter:
-
-```bash
-which python
-python --version
-```
-
-### Permission Errors
-
-Use `--user` flag if you don't have system permissions:
+Ensure Docker is running:
 
 ```bash
-pip install --user my-project
+docker info
 ```
 
-Or use a virtual environment (recommended):
+If using Docker Desktop, wait for the engine to fully start before running `docker compose up`.
+
+### Port conflicts
+
+If ports 9094, 8080, 9000, or 9001 are already in use, stop the conflicting service or modify `docker-compose.yaml`.
+
+### `uv sync` fails
+
+Ensure you have Python 3.13 installed and available:
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install my-project
+uv python list
 ```
 
-## Next Steps
+If 3.13 is not installed:
 
-- [Quick Start](quickstart.md)
-- [Basic Usage](../guides/basic-usage.md)
+```bash
+uv python install 3.13
+```

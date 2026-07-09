@@ -1,22 +1,28 @@
-site_name: My Python Project
-site_description: Professional documentation for your Python project
-site_author: Your Name
-repo_url: https://github.com/yourusername/your-project
-repo_name: your-project
+site_name: Crypto Platform
+site_description: End-to-end crypto market intelligence platform — live + historical data ingestion, lakehouse storage, OLAP analytics, and ML price-movement prediction.
+site_url: https://yourusername.github.io/crypto-platform/
+repo_url: https://github.com/yourusername/crypto-platform
+repo_name: crypto-platform
 edit_uri: edit/main/docs/
 
 theme:
-  name: mkdocs
+  name: material
   features:
     - navigation.instant
     - navigation.tracking
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.top
     - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.expand
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
     - search.suggest
     - search.highlight
+    - search.share
     - toc.follow
   palette:
     - scheme: default
@@ -31,41 +37,104 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
 
 plugins:
   - search
+  - tags
   - mkdocstrings:
       default_handler: python
       handlers:
         python:
-          import_statement: from my_project import
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_category_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            docstring_style: google
+            docstring_section_style: spacy
+            merge_init_into_class: true
+            show_signature_annotations: true
 
 nav:
   - Home: index.md
   - Getting Started:
+    - Prerequisites: getting-started/prerequisites.md
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-  - Guides:
-    - Basic Usage: guides/basic-usage.md
-    - Advanced Features: guides/advanced.md
-    - Configuration: guides/configuration.md
-  - API Reference:
+  - Architecture:
     - Overview: architecture/overview.md
-    - Core Module: architecture/core.md
+    - System Design: architecture/system-design.md
+    - Data Flow: architecture/data-flow.md
+    - Tech Stack: architecture/tech-stack.md
+  - Guides:
+    - Configuration: guides/configuration.md
+    - Running the Pipeline: guides/running-the-pipeline.md
+    - Testing: guides/testing.md
+  - Reference:
+    - CLI Commands: reference/cli.md
+    - API — Utils: reference/api-utils.md
+    - API — Ingestion: reference/api-ingestion.md
+    - API — Batch: reference/api-batch.md
+    - Environment Variables: reference/env-vars.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Roadmap: development/roadmap.md
   - FAQ: faq.md
 
 markdown_extensions:
+  - admonition
+  - pymdownx.details
   - pymdownx.highlight:
       use_pygments: true
       anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:
       custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - def_list
   - toc:
       permalink: true
-  - admonition
-  - pymdownx.details
+      toc_depth: 3
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/crypto-platform
+  status:
+    - success
+    - success
+
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn

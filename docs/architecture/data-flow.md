@@ -1,0 +1,141 @@
+# Data Flow
+
+Trace the complete journey of data from Binance through every layer of the platform.
+
+## Live Pipeline (Phase 1)
+
+```mermaid
+sequenceDiagram
+    participant Binance as Binance WS
+    participant WS as ws_client.py
+    participant Kafka as Apache Kafka
+    participant LW as lake_writer.py
+    participant MinIO as MinIO S3
+
+    Binance->>WS: WebSocket frame (JSON)
+    WS->>WS: Parse BinanceWSMessage (Pydantic)
+    WS->>WS: Partition by symbol → TopicPartition
+    WS->>Kafka: Producer.produce(topic, partition, value)
+
+    Note over Kafka: Messages buffered in Kafka
+
+    Kafka->>LW: Consumer.poll() (every 0.5s)
+    LW->>LW: Deserialize JSON → dict
+    LW->>LW: Write to in-memory pyarrow.RecordBatchFileWriter
+    LW->>LW: Check flush conditions:<br/>- 30 seconds elapsed?<br/>- 1000+ messages buffered?
+
+    alt Flush triggered
+        LW->>MinIO: put_object(bronze/{topic}/symbol=X/year=Y/month=M/day=D/<uuid>.parquet)
+        LW->>LW: Reset buffer + counters
+    end
+```
+
+### Live Pipeline Details
+
+1. **WebSocket Client** (`ws_client.py`)
+   - Connects to `wss://stream.binance.com:9443/ws/`
+   - Subscribes to multiple streams in one connection (`<symbol>@trade`, `<symbol>@kline_<interval>`)
+   - Each incoming message is parsed through a discriminated union (`Trade | Kline`)
+   - Messages are partitioned by symbol and sent to the correct Kafka partition
+   - Graceful shutdown via `signal.signal(SIGINT)`
+
+2. **Kafka Broker**
+   - Topics: `raw.trades`, `raw.klines`
+   - KRaft mode (no ZooKeeper dependency)
+   - Partitions: Configurable per topic
+   - Messages retained for 7 days (configurable)
+
+3. **Lake Writer** (`lake_writer.py`)
+   - Polls Kafka every 0.5s (configurable)
+   - Buffers messages in memory
+   - Flushes to MinIO when either condition is met:
+     - 30 seconds since last flush (configurable)
+     - 1,000+ messages buffered (configurable)
+   - Each flush creates a new Parquet file with a UUID filename
+   - Files are written to Hive-partitioned paths
+
+## Batch Pipeline (Phase 2)
+
+```mermaid
+sequenceDiagram
+    participant REST as Binance REST API
+    participant Backfill as run_backfill.py
+    participant MinIO as MinIO S3
+    participant Spark as run_silver.py
+
+    Backfill->>REST: GET /api/v3/klines (1000 candles)
+    REST-->>Backfill: JSON response (1000 rows)
+    Backfill->>Backfill: Rate limit (10 tokens, 1200/min)
+    Backfill->>MinIO: Write bronze Parquet (chunk)
+
+    Note over Backfill: Repeat for next chunk...
+    Backfill->>MinIO: Final chunk written
+
+    Note over Spark: Triggered manually or via cron
+
+    Spark->>MinIO: Read ALL bronze Parquet (glob path)
+    Spark->>Spark: Deduplicate (group by symbol+open_time)
+    Spark->>Spark: Cast types (str→decimal, ts→long)
+    Spark->>Spark: Repartition (200 partitions)
+    Spark->>MinIO: Overwrite silver Parquet (Hive-style)
+```
+
+### Batch Pipeline Details
+
+1. **REST Backfiller** (`binance_rest.py`)
+   - Uses `httpx.AsyncClient` with connection pooling (100 max connections)
+   - Rate limited: 10 tokens per request, 1200 tokens/minute
+   - Splits large backfills into 7-day chunks (configurable)
+   - Each chunk is written as a separate Parquet file
+   - Retry with exponential backoff (up to 3 attempts per chunk)
+   - Results aggregated into `BackfillResult`
+
+2. **Silver Transformer** (`kline_transformer.py`)
+   - PySpark job running in local mode (`local[*]`)
+   - **Read**: Globs all `silver/klines/**/*.parquet` from MinIO
+   - **Deduplicate**: `dropDuplicates(["symbol", "open_time"])`
+   - **Cast**: Ensures correct types (decimals, longs)
+   - **Repartition**: 200 partitions for write parallelism
+   - **Write**: Overwrites `silver/klines/` with cleaned data
+   - Reports `SilverResult` with input/output/duplicate counts
+
+## Data Lineage
+
+```
+Binance WebSocket
+  └→ ws_client.py
+       └→ Kafka (raw.trades, raw.klines)
+            └→ lake_writer.py
+                 └→ MinIO bronze/trades/<uuid>.parquet
+                 └→ MinIO bronze/klines/<uuid>.parquet
+
+Binance REST API
+  └→ binance_rest.py (run_backfill.py)
+       └→ MinIO bronze/klines/<uuid>.parquet
+
+MinIO bronze/
+  └→ kline_transformer.py (run_silver.py)
+       └→ MinIO silver/klines/<uuid>.parquet
+```
+
+## File Naming
+
+All Parquet files use UUID-based filenames to prevent duplicate writes:
+
+```
+{uuid}.parquet          # e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890.parquet
+```
+
+The `lake_writer.py` checks if a file with the same UUID already exists before writing — if it does, the write is skipped (idempotent).
+
+## Flush Behavior
+
+The lake writer uses a dual-trigger flush mechanism:
+
+| Trigger | Default | Configurable |
+|---------|---------|--------------|
+| Time-based | 30 seconds | `INGESTION_FLUSH_INTERVAL_SECONDS` |
+| Size-based | 1,000 messages | `INGESTION_FLUSH_THRESHOLD` |
+| Shutdown | On SIGINT/SIGTERM | Automatic |
+
+On shutdown, remaining messages are flushed immediately (no data loss).
