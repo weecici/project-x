@@ -1,14 +1,11 @@
-# Crypto platform — Phase 1 Docker Compose stack.
+# Crypto platform — Phase 1–3 Docker Compose stack.
 #
 # Services:
-#   kafka       - Apache Kafka (KRaft mode, no ZooKeeper)  apache/kafka:latest
-#   kafka-ui    - Provectus Kafka UI  http://localhost:8080
-#   minio       - MinIO S3-compatible object storage  http://localhost:9001
-#   mc-init     - One-shot init: creates bronze / silver / gold buckets
-#
-# Listener layout:
-#   INTERNAL  kafka:9092   - Docker-internal service communication
-#   EXTERNAL  localhost:9094 - Host-side Python processes
+#   kafka         - Apache Kafka (KRaft mode, no ZooKeeper)  apache/kafka:latest
+#   kafka-ui      - Provectus Kafka UI  http://localhost:8080
+#   minio         - MinIO S3-compatible object storage  http://localhost:9001
+#   mc-init       - One-shot init: creates bronze / silver / gold buckets
+#   clickhouse    - ClickHouse OLAP engine  http://localhost:8123
 #
 # Usage:
 #   docker compose up -d
@@ -141,6 +138,38 @@ services:
     networks:
       - platform-net
 
+  # --------------------------------------------------------------------------
+  # ClickHouse — columnar OLAP engine
+  # --------------------------------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:head-alpine
+    container_name: platform-clickhouse
+    ports:
+      - "8123:8123"   # HTTP interface (clickhouse-connect, dbt)
+      - "9009:9009"   # Native TCP (ClickHouse-to-ClickHouse replication)
+    environment:
+      CLICKHOUSE_DB: gold
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infra/clickhouse/config.d/custom-config.xml:/etc/clickhouse-server/config.d/custom-config.xml
+      - ./infra/clickhouse/users.d/custom-users.xml:/etc/clickhouse-server/users.d/custom-users.xml
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    mem_limit: 2048m
+    networks:
+      - platform-net
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
 # ------------------------------------------------------------------------------
 # Named volumes — persist data across compose up/down cycles
 # ------------------------------------------------------------------------------
@@ -148,6 +177,8 @@ volumes:
   kafka_data:
     driver: local
   minio_data:
+    driver: local
+  clickhouse_data:
     driver: local
 
 # ------------------------------------------------------------------------------

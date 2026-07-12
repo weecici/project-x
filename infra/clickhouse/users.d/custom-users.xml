@@ -1,0 +1,24 @@
+<clickhouse>
+    <profiles>
+        <default>
+            <!-- Capped query memory to 256MB to avoid system OOM under our local RAM budget -->
+            <max_memory_usage>268435456</max_memory_usage>
+            <!-- Cap slow-running query execution times to 60 seconds -->
+            <max_execution_time>60</max_execution_time>
+            <!-- Limit threads to prevent memory explosion on multi-core systems -->
+            <max_threads>2</max_threads>
+        </default>
+    </profiles>
+
+    <users>
+        <default>
+            <!-- Default user connects to gold by default -->
+            <default_database>gold</default_database>
+            <!-- Dev setup with passwordless default authentication -->
+            <password></password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+        </default>
+    </users>
+</clickhouse>

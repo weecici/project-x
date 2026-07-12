@@ -1,0 +1,13 @@
+<clickhouse>
+    <!-- Configure ClickHouse timezone to UTC to align with S3 and dbt -->
+    <timezone>UTC</timezone>
+
+    <!-- Configure logger level to warning to minimize local disk write noise -->
+    <logger>
+        <level>warning</level>
+        <console>1</console>
+    </logger>
+
+    <!-- Listen on all interfaces to allow external hosts and container connections -->
+    <listen_host>::</listen_host>
+</clickhouse>
