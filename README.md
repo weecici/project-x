@@ -24,11 +24,20 @@ flowchart TB
         SILVER["Silver\n(Deduped)"]
     end
 
+    subgraph OLAP["OLAP + Analytics"]
+        LOADER["OLAP Loader"]
+        CH["ClickHouse"]
+        DBT["dbt Models"]
+    end
+
     WS --> PROD --> KAFKA --> BRONZE
     REST --> BF --> BRONZE
     BRONZE --> SPARK --> SILVER
 
-    style LAKE fill:#e8f5e9,stroke:#4caf50
+    SILVER --> LOADER --> CH
+    CH --> DBT
+
+    style OLAP fill:#e3f2fd,stroke:#1976d2
 ```
 
 ## Quick Start
@@ -49,6 +58,14 @@ uv run write-lake     # Terminal 2: Kafka → MinIO
 # 4. Run batch pipeline
 uv run backfill       # Historical data → bronze
 uv run silver         # Bronze → silver transformation
+
+# 5. Load into ClickHouse
+uv run load-olap      # Silver → ClickHouse
+
+# 6. Build gold tables
+uv run dbt deps       # Install dbt packages
+uv run dbt run        # Run all dbt models
+uv run dbt test       # Run dbt tests
 ```
 
 ## Tech Stack
@@ -59,6 +76,8 @@ uv run silver         # Bronze → silver transformation
 | Streaming | Apache Kafka (KRaft), confluent-kafka |
 | Batch | PySpark, httpx |
 | Storage | MinIO (S3-compatible), Parquet |
+| OLAP | ClickHouse, clickhouse-connect |
+| Transforms | dbt, dbt-clickhouse |
 | Validation | Pydantic v2 |
 | Infrastructure | Docker Compose |
 | Testing | pytest, testcontainers |
@@ -70,7 +89,19 @@ uv run silver         # Bronze → silver transformation
 src/
 ├── utils/           # Shared utilities (logging, retry, storage)
 ├── ingestion/       # Live WS → Kafka → MinIO pipeline
-└── batch/           # REST backfill + PySpark silver transformer
+│   ├── producer/    # WebSocket → Kafka producer
+│   └── writer/      # Kafka → MinIO lake writer
+├── batch/           # REST backfill + PySpark silver transformer
+│   ├── backfill/    # Binance REST client
+│   └── silver/      # PySpark transformer
+└── olap/            # MinIO silver → ClickHouse loader
+
+dbt/
+├── models/
+│   ├── staging/     # Silver → staging views
+│   └── marts/       # Gold aggregated tables
+└── macros/          # Schema naming overrides
+
 tests/
 ├── unit/            # Fast, no Docker
 ├── integration/     # Docker required (testcontainers)
@@ -85,6 +116,7 @@ Full documentation is available at [docs/](docs/):
 - [Configuration](docs/guides/configuration.md) — All environment variables
 - [CLI Reference](docs/reference/cli.md) — All commands
 - [API Reference](docs/reference/api-utils.md) — Auto-generated from docstrings
+- [dbt Models](docs/guides/dbt.md) — dbt model catalog and usage
 - [Roadmap](docs/development/roadmap.md) — 10-phase build plan
 
 ## Development
@@ -102,6 +134,13 @@ uv run mypy src/
 
 # Build docs locally
 uv run mkdocs serve
+
+# Just shortcuts
+just pc              # Pre-commit hooks
+just check           # Lint
+just format          # Format
+just mypy            # Type check
+just docs            # Serve docs
 ```
 
 ## Current Status
@@ -110,7 +149,7 @@ uv run mkdocs serve
 |:-----:|------|:------:|
 | 1 | Foundation + Ingestion | Done |
 | 2 | Batch + Lake Maturation | Done |
-| 3 | OLAP + dbt | Planned |
+| 3 | OLAP + dbt | Done |
 | 4 | Stream Processing | Planned |
 | 5 | Semantic Layer + BI | Planned |
 | 6 | Orchestration + Governance | Planned |
