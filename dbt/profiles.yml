@@ -1,0 +1,19 @@
+crypto_platform:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      schema: gold            # default database target is 'gold'
+      host: "{{ env_var('CLICKHOUSE_HOST', 'localhost') }}"
+      port: "{{ env_var('CLICKHOUSE_PORT', '8123') | int }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'default') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD', '') }}"
+      secure: false
+      verify: false
+      connect_timeout: 10
+      send_receive_timeout: 300
+      sync_request_timeout: 5
+      compress_block_size: 1048576
+      compression: ""
+      driver: http            # HTTP interface for clickhouse-connect
+      threads: 1

@@ -1,0 +1,43 @@
+version: 2
+
+sources:
+  - name: silver
+    database: silver
+    schema: silver
+    description: "ClickHouse silver database — contains raw landing tables loaded from MinIO silver Parquet."
+    tables:
+      - name: klines_raw
+        description: >
+          Raw kline bars loaded from MinIO silver Parquet by the OLAP loader.
+          ReplacingMergeTree handles deduplication during background merges.
+          Partitioned by (symbol, toYYYYMM(open_time)).
+        columns:
+          - name: symbol
+            description: "Trading-pair symbol, e.g. BTCUSDT."
+            tests: [not_null]
+          - name: interval
+            description: "Kline interval string, e.g. 1m, 1h, 1d."
+            tests: [not_null]
+          - name: open_time
+            description: "Bar open timestamp (UTC, millisecond precision)."
+            tests: [not_null]
+          - name: open
+            tests: [not_null]
+          - name: high
+            tests: [not_null]
+          - name: low
+            tests: [not_null]
+          - name: close
+            tests: [not_null]
+          - name: volume
+            tests: [not_null]
+          - name: close_time
+            tests: [not_null]
+          - name: quote_volume
+            tests: [not_null]
+          - name: num_trades
+            tests: [not_null]
+          - name: taker_buy_base_volume
+            tests: [not_null]
+          - name: taker_buy_quote_volume
+            tests: [not_null]

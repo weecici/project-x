@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: stg_crypto__klines
+    description: >
+      Typed view on silver.klines_raw. Serves as the stable schema contract
+      for all gold models.
+    columns:
+      - name: kline_id
+        description: "Surrogate primary key (symbol, interval, open_time)."
+        tests:
+          - unique
+          - not_null
+      - name: symbol
+        description: "Trading-pair symbol."
+        tests: [not_null]
+      - name: interval
+        description: "Kline interval string."
+        tests: [not_null]
+      - name: open_at
+        description: "Bar open timestamp (UTC)."
+        tests: [not_null]
+      - name: close_at
+        description: "Bar close timestamp (UTC)."
+        tests: [not_null]
+      - name: open
+        tests: [not_null]
+      - name: high
+        tests: [not_null]
+      - name: low
+        tests: [not_null]
+      - name: close
+        tests: [not_null]
+      - name: volume
+        tests: [not_null]

@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: fct_daily_klines
+    description: >
+      Daily OHLCV aggregates from 1m bars. One row per (symbol, trade_date).
+      Open is the first bar's open; close is the last bar's close.
+      Materialized as a table in the 'gold' database.
+    columns:
+      - name: daily_kline_id
+        description: "Surrogate primary key (symbol, trade_date)."
+        tests:
+          - unique
+          - not_null
+      - name: symbol
+        tests: [not_null]
+      - name: trade_date
+        description: "UTC date of the trading day."
+        tests: [not_null]
+      - name: open
+        tests: [not_null]
+      - name: high
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= low"
+      - name: low
+        tests: [not_null]
+      - name: close
+        tests: [not_null]
+      - name: volume
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: num_trades
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+  - name: fct_hourly_klines
+    description: >
+      Hourly OHLCV aggregates from 1m bars. One row per (symbol, hour_at).
+      Materialized as a table in the 'gold' database.
+    columns:
+      - name: hourly_kline_id
+        description: "Surrogate primary key (symbol, hour_at)."
+        tests:
+          - unique
+          - not_null
+      - name: symbol
+        tests: [not_null]
+      - name: hour_at
+        description: "UTC datetime truncated to the hour."
+        tests: [not_null]
+      - name: open
+        tests: [not_null]
+      - name: high
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= low"
+      - name: low
+        tests: [not_null]
+      - name: close
+        tests: [not_null]
+      - name: volume
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+  - name: fct_kline_returns
+    description: >
+      Log returns per (symbol, interval, open_at): ln(close / prev_close).
+      Computed using ClickHouse's neighbor() window function.
+      Materialized as a table in the 'gold' database.
+    columns:
+      - name: kline_return_id
+        description: "Surrogate primary key (symbol, interval, open_at)."
+        tests:
+          - unique
+          - not_null
+      - name: symbol
+        tests: [not_null]
+      - name: interval
+        tests: [not_null]
+      - name: open_at
+        tests: [not_null]
+      - name: close
+        tests: [not_null]
+      - name: log_return
+        description: "Natural log of close / previous close. NULL for the first bar of each series."
