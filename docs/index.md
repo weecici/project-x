@@ -63,13 +63,17 @@ flowchart TB
     end
 
     subgraph LAKE["Lake Storage (Medallion)"]
-        S3["MinIO S3\nBronze → Silver → Gold\n(Parquet)"]
+        S3["MinIO S3\nBronze → Silver\n(Parquet)"]
+    end
+
+    subgraph OLAP["OLAP + Analytics"]
+        LOADER["OLAP loader\n(silver → ClickHouse)"]
+        CH["ClickHouse\n(OLAP database)"]
+        DBT["dbt models\n(staging → gold marts)"]
     end
 
     subgraph FUTURE["Future Phases"]
         FLINK["Flink\n(stream processing)"]
-        DBT["dbt\n(silver → gold)"]
-        CH["ClickHouse\n(OLAP)"]
         ML["ML Pipeline\n(PyTorch + MLflow)"]
     end
 
@@ -78,9 +82,11 @@ flowchart TB
     REST --> BACKFILL --> S3
     S3 --> SPARK --> S3
 
-    KAFKA -.-> FLINK
-    S3 -.-> DBT -.-> CH
-    S3 -.-> ML
+    S3 --> LOADER --> CH
+    CH --> DBT
+
+    DBT -.-> FLINK
+    DBT -.-> ML
 
     style FUTURE fill:#f0f0f0,stroke:#999,stroke-dasharray: 5 5
 ```
@@ -91,7 +97,7 @@ flowchart TB
 |:-----:|------|:------:|
 | 1 | Foundation + Ingestion | :material-check-circle:{ style="color: green" } Complete |
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } Complete |
-| 3 | OLAP + dbt | :material-circle-outline: Planned |
+| 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } Complete |
 | 4 | Stream Processing | :material-circle-outline: Planned |
 | 5 | Semantic Layer + BI | :material-circle-outline: Planned |
 | 6 | Orchestration + Governance | :material-circle-outline: Planned |
@@ -112,4 +118,4 @@ uv sync
 
 ---
 
-**Python 3.13** · **uv** · **Docker** · **Apache Kafka** · **MinIO** · **PySpark**
+**Python 3.13** · **uv** · **Docker** · **Apache Kafka** · **MinIO** · **PySpark** · **ClickHouse** · **dbt**

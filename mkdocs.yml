@@ -78,12 +78,14 @@ nav:
   - Guides:
     - Configuration: guides/configuration.md
     - Running the Pipeline: guides/running-the-pipeline.md
+    - dbt Models: guides/dbt.md
     - Testing: guides/testing.md
   - Reference:
     - CLI Commands: reference/cli.md
     - API — Utils: reference/api-utils.md
     - API — Ingestion: reference/api-ingestion.md
     - API — Batch: reference/api-batch.md
+    - API — OLAP: reference/api-olap.md
     - Environment Variables: reference/env-vars.md
   - Development:
     - Contributing: development/contributing.md

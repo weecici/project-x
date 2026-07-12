@@ -4,11 +4,11 @@ All configuration is managed through environment variables and `.env` files, val
 
 ## How Configuration Works
 
-Both `IngestionConfig` and `BatchConfig` extend `pydantic_settings.BaseSettings`:
+All config classes (`IngestionConfig`, `BatchConfig`, `OlapConfig`) extend `pydantic_settings.BaseSettings`:
 
 1. **Environment variables** are checked first (highest priority)
 2. **`.env` file** is loaded as fallback
-3. **Hardcoded defaults** in the `Settings` inner class provide final fallback
+3. **Hardcoded defaults** in each config class provide final fallback
 
 This means you can override any setting via env var without changing code.
 
@@ -77,16 +77,43 @@ BACKFILL_CHUNK_DAYS=14
 SILVER_LOG_LEVEL=DEBUG
 ```
 
-## AWS/MinIO Storage
+## OLAP Configuration
+
+These control the MinIO silver → ClickHouse loader.
 
 | Env Var | Type | Default | Description |
 |---------|------|---------|-------------|
-| `AWS_ACCESS_KEY_ID` | `str` | `minioadmin` | S3 access key |
-| `AWS_SECRET_ACCESS_KEY` | `str` | `minioadmin` | S3 secret key |
-| `AWS_ENDPOINT_URL` | `str` | `http://localhost:9000` | S3/MinIO endpoint |
+| `CLICKHOUSE_HOST` | `str` | `localhost` | ClickHouse host |
+| `CLICKHOUSE_PORT` | `int` | `8123` | HTTP interface port |
+| `CLICKHOUSE_DB` | `str` | `silver` | Target database |
+| `CLICKHOUSE_USER` | `str` | `default` | ClickHouse user |
+| `CLICKHOUSE_PASSWORD` | `str` | `""` | ClickHouse password |
+| `CLICKHOUSE_TABLE_KLINES` | `str` | `klines_raw` | Target table for kline data |
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO endpoint |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
+| `SILVER_KLINES_PREFIX` | `str` | `klines/` | S3 prefix for kline Parquet |
+
+**Example `.env`:**
+
+```bash
+CLICKHOUSE_HOST=localhost
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_DB=silver
+CLICKHOUSE_TABLE_KLINES=klines_raw
+```
+
+## MinIO Storage
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO/S3 endpoint URL |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | S3 access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | S3 secret key |
+| `MINIO_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
+| `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
 | `AWS_DEFAULT_REGION` | `str` | `us-east-1` | AWS region (required by boto3/pyarrow) |
-| `AWS_S3_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
-| `AWS_S3_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
 
 ## Docker Compose Ports
 
@@ -96,3 +123,17 @@ SILVER_LOG_LEVEL=DEBUG
 | Kafka UI | 8080 | Web UI |
 | MinIO API | 9000 | S3 API |
 | MinIO Console | 9001 | Web console |
+| ClickHouse HTTP | 8123 | HTTP interface (OLAP queries, dbt) |
+| ClickHouse TCP | 9009 | Native TCP (internal replication) |
+
+## ClickHouse Resource Limits
+
+The ClickHouse container is configured with conservative resource limits for local development:
+
+| Setting | Value | Source |
+|---------|-------|--------|
+| Container memory limit | 2 GB | `docker-compose.yaml` |
+| Per-query memory cap | 256 MB | `custom-users.xml` |
+| Max execution time | 60s | `custom-users.xml` |
+| Max threads | 2 | `custom-users.xml` |
+| Timezone | UTC | `custom-config.xml` |

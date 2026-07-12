@@ -6,12 +6,12 @@ Complete reference of all environment variables used by the platform.
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `AWS_ACCESS_KEY_ID` | `str` | `minioadmin` | S3 access key |
-| `AWS_SECRET_ACCESS_KEY` | `str` | `minioadmin` | S3 secret key |
-| `AWS_ENDPOINT_URL` | `str` | `http://localhost:9000` | S3/MinIO endpoint URL |
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO endpoint URL |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `MINIO_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
+| `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
 | `AWS_DEFAULT_REGION` | `str` | `us-east-1` | AWS region (required by boto3/pyarrow) |
-| `AWS_S3_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
-| `AWS_S3_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
 
 ## Ingestion (Live Pipeline)
 
@@ -47,6 +47,33 @@ Complete reference of all environment variables used by the platform.
 | `SILVER_OUTPUT_PATH` | `str` | `silver/klines` | Output silver path |
 | `SILVER_LOG_LEVEL` | `str` | `INFO` | Log level |
 
+## ClickHouse (OLAP)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `CLICKHOUSE_HOST` | `str` | `localhost` | ClickHouse host |
+| `CLICKHOUSE_PORT` | `int` | `8123` | HTTP interface port |
+| `CLICKHOUSE_DB` | `str` | `silver` | Target database for OLAP loader |
+| `CLICKHOUSE_USER` | `str` | `default` | ClickHouse user |
+| `CLICKHOUSE_PASSWORD` | `str` | `""` | ClickHouse password |
+| `CLICKHOUSE_TABLE_KLINES` | `str` | `klines_raw` | Target table for kline data |
+
+!!! note "Database naming"
+    The OLAP loader defaults to `silver` database. The docker-compose sets `CLICKHOUSE_DB=gold` for the ClickHouse container's default database. dbt targets `gold` via `profiles.yml`. These are independent: the loader writes to `silver`, dbt reads from `silver` and writes to `gold`.
+
+## dbt
+
+dbt uses the same `CLICKHOUSE_*` environment variables as the OLAP loader, referenced in `dbt/profiles.yml`:
+
+| Variable | Used By | Default |
+|----------|---------|---------|
+| `CLICKHOUSE_HOST` | `profiles.yml` | `localhost` |
+| `CLICKHOUSE_PORT` | `profiles.yml` | `8123` |
+| `CLICKHOUSE_USER` | `profiles.yml` | `default` |
+| `CLICKHOUSE_PASSWORD` | `profiles.yml` | `""` |
+
+Additionally, `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true` must be set when running dbt commands (already configured in the justfile).
+
 ## Docker Compose
 
 | Variable | Type | Default | Description |
@@ -59,7 +86,7 @@ Configuration is loaded in this priority order (highest to lowest):
 
 1. **Environment variables** (set in shell or CI)
 2. **`.env` file** (loaded by `dotenv_values()`)
-3. **Hardcoded defaults** (in `Settings` inner class)
+3. **Hardcoded defaults** (in each config class)
 
 ```python
 # Example: overriding via env var
@@ -75,9 +102,8 @@ The `.env` file supports standard shell syntax:
 
 ```bash
 # Comments start with #
-AWS_ACCESS_KEY_ID=minioadmin
-AWS_SECRET_ACCESS_KEY=minioadmin
-AWS_ENDPOINT_URL=http://localhost:9000
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=minioadmin
 
 # Lists use JSON syntax
 INGESTION_SYMBOLS='["BTCUSDT", "ETHUSDT", "SOLUSDT"]'
@@ -85,8 +111,10 @@ INGESTION_SYMBOLS='["BTCUSDT", "ETHUSDT", "SOLUSDT"]'
 # Datetime uses ISO format
 BACKFILL_START_TIME=2026-01-01T00:00:00Z
 
-# Boolean-like strings
-INGESTION_LOG_LEVEL=DEBUG
+# ClickHouse connection
+CLICKHOUSE_HOST=localhost
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_DB=silver
 ```
 
 !!! warning "Export prefix supported"

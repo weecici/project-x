@@ -99,6 +99,50 @@ sequenceDiagram
    - **Write**: Overwrites `silver/klines/` with cleaned data
    - Reports `SilverResult` with input/output/duplicate counts
 
+## OLAP Pipeline (Phase 3)
+
+```mermaid
+sequenceDiagram
+    participant MinIO as MinIO S3
+    participant Loader as olap/loader.py
+    participant CH as ClickHouse
+    participant dbt as dbt models
+
+    Note over Loader: Triggered via uv run load-olap
+
+    Loader->>CH: CREATE DATABASE IF NOT EXISTS silver
+    Loader->>CH: CREATE DATABASE IF NOT EXISTS gold
+    Loader->>CH: CREATE TABLE IF NOT EXISTS silver.klines_raw (DDL)
+
+    Loader->>MinIO: pyarrow.dataset.dataset(silver/klines/, partitioning=hive)
+    Loader->>Loader: Project + cast to _SILVER_SCHEMA
+    Loader->>CH: client.insert_arrow(silver.klines_raw, table)
+
+    Note over dbt: Triggered via uv run dbt run
+
+    dbt->>CH: CREATE VIEW silver.stg_crypto__klines AS ... FINAL
+    dbt->>CH: CREATE TABLE gold.fct_daily_klines AS ... GROUP BY
+    dbt->>CH: CREATE TABLE gold.fct_hourly_klines AS ... GROUP BY
+    dbt->>CH: CREATE TABLE gold.fct_kline_returns AS ... lag() window
+```
+
+### OLAP Pipeline Details
+
+1. **OLAP Loader** (`loader.py`)
+   - Creates `silver` and `gold` databases if they don't exist
+   - Runs `KLINES_RAW_DDL` to create `silver.klines_raw` table
+   - Reads Hive-partitioned Parquet directly from MinIO via `pyarrow.dataset`
+   - Projects and casts columns to match `_SILVER_SCHEMA`
+   - Inserts via `clickhouse-connect` `insert_arrow()` (zero-copy columnar path)
+   - `ReplacingMergeTree(_loaded_at)` ensures idempotent re-loads
+
+2. **dbt Models**
+   - **Staging** (`stg_crypto__klines`): View on `silver.klines_raw` with `FINAL` keyword for dedup, surrogate keys via `dbt_utils.generate_surrogate_key`
+   - **Marts**: Aggregated tables in `gold` database
+     - `fct_daily_klines`: Daily OHLCV from 1m bars (`argMin`/`argMax` for open/close)
+     - `fct_hourly_klines`: Hourly OHLCV (same logic, hourly grouping)
+     - `fct_kline_returns`: Log returns via `lag()` window function
+
 ## Data Lineage
 
 ```
@@ -116,6 +160,16 @@ Binance REST API
 MinIO bronze/
   └→ kline_transformer.py (run_silver.py)
        └→ MinIO silver/klines/<uuid>.parquet
+
+MinIO silver/
+  └→ olap/loader.py (run_loader.py)
+       └→ ClickHouse silver.klines_raw
+
+ClickHouse silver/
+  └→ dbt (stg_crypto__klines view)
+       └→ gold.fct_daily_klines
+       └→ gold.fct_hourly_klines
+       └→ gold.fct_kline_returns
 ```
 
 ## File Naming

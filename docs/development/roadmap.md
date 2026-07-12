@@ -8,7 +8,7 @@
 |:-----:|------|:------:|-------------|
 | 1 | Foundation + Ingestion | :material-check-circle:{ style="color: green" } | Live WS → Kafka → MinIO lake |
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } | REST backfill, PySpark silver |
-| 3 | OLAP + dbt | :material-clock-outline: | dbt models, ClickHouse integration |
+| 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } | ClickHouse, dbt staging + gold marts |
 | 4 | Stream Processing | :material-clock-outline: | Flink windowed aggregations |
 | 5 | Semantic Layer + BI | :material-clock-outline: | Metrics store, dashboard integration |
 | 6 | Orchestration + Governance | :material-clock-outline: | Airflow DAGs, data quality |
@@ -46,13 +46,16 @@
 
 ### Phase 3 — OLAP + dbt
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-check-circle: Complete
 
-- [ ] dbt project initialization
-- [ ] Silver → gold SQL models
-- [ ] ClickHouse integration
-- [ ] Technical indicators (RSI, MACD, Bollinger)
-- [ ] Materialized views for analytics
+- [x] ClickHouse infrastructure (Docker, config, users)
+- [x] OLAP loader (MinIO silver → ClickHouse)
+- [x] ReplacingMergeTree for idempotent loads
+- [x] dbt project initialization
+- [x] dbt staging model (`stg_crypto__klines`)
+- [x] dbt gold marts (`fct_daily_klines`, `fct_hourly_klines`, `fct_kline_returns`)
+- [x] Custom `generate_schema_name` macro
+- [x] Unit + integration tests for OLAP loader
 
 ### Phase 4 — Stream Processing
 

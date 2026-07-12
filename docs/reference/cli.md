@@ -1,6 +1,6 @@
 # CLI Commands
 
-All commands are defined as `[project.scripts]` in `pyproject.toml` and run via `uv run`.
+All commands are defined as `[project.scripts]` in `pyproject.toml` and run via `uv run`. Shortcut recipes are available in the `justfile`.
 
 ## `produce`
 
@@ -125,21 +125,75 @@ uv run silver
 
 ---
 
+## `load-olap`
+
+Load silver-layer Parquet from MinIO into ClickHouse.
+
+```bash
+uv run load-olap
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | MinIO `silver/klines/**/*.parquet` (Hive-partitioned) |
+| **Output** | ClickHouse `silver.klines_raw` (ReplacingMergeTree) |
+| **Config** | `CLICKHOUSE_*` + `MINIO_*` env vars |
+
+**What it does:**
+
+1. Creates `silver` and `gold` databases if they don't exist
+2. Runs DDL to create `silver.klines_raw` table (ReplacingMergeTree)
+3. Reads Hive-partitioned Parquet directly from MinIO via PyArrow dataset
+4. Projects and casts columns to match the defined schema
+5. Inserts into ClickHouse via `insert_arrow()` (zero-copy columnar path)
+6. Returns the total row count inserted
+
+**Key details:**
+
+- `ReplacingMergeTree(_loaded_at)` ensures idempotent re-loads (dedup on background merge)
+- Partitioned by `(symbol, toYYYYMM(open_time))`
+- Ordered by `(symbol, interval, open_time)`
+
+---
+
+## Justfile Shortcuts
+
+The `justfile` provides shortcut recipes for all commands:
+
+| Recipe | Command | Description |
+|--------|---------|-------------|
+| `just produce` | `uv run produce` | Start live producer |
+| `just write-lake` | `uv run write-lake` | Start lake writer |
+| `just backfill` | `uv run backfill` | Backfill historical data |
+| `just silver` | `uv run silver` | Run silver transformation |
+| `just load-olap` | `uv run load-olap` | Load silver → ClickHouse |
+| `just dbt-deps` | `cd dbt && dbt deps` | Install dbt packages |
+| `just dbt-run` | `cd dbt && dbt run` | Run all dbt models |
+| `just dbt-test` | `cd dbt && dbt test` | Run all dbt tests |
+| `just pc` | `uv run pre-commit run` | Run pre-commit hooks |
+| `just check` | `uv run ruff check .` | Lint code |
+| `just format` | `uv run ruff format .` | Format code |
+| `just mypy` | `uv run mypy .` | Type check |
+| `just docs` | `uv run mkdocs serve` | Serve docs locally |
+
+---
+
 ## Entry Point Registration
 
 All commands are registered in `pyproject.toml`:
 
 ```toml
 [project.scripts]
-produce = "src.ingestion.run_producer:main"
-write-lake = "src.ingestion.run_lake_writer:main"
-backfill = "src.batch.run_backfill:main"
-silver = "src.batch.run_silver:main"
+produce = "ingestion.run_producer:cli"
+write-lake = "ingestion.run_lake_writer:cli"
+backfill = "batch.run_backfill:cli"
+silver = "batch.run_silver:cli"
+load-olap = "olap.run_loader:cli"
 ```
 
-Each `run_*.py` module contains a `main()` function that:
+Each `run_*.py` module contains a `cli()` function that:
 
 1. Loads configuration from environment/`.env`
 2. Sets up structured logging
-3. Runs the async event loop (or PySpark job)
+3. Runs the async event loop (or PySpark job / ClickHouse loader)
 4. Handles graceful shutdown via signal handlers

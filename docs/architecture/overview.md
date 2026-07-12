@@ -1,6 +1,6 @@
 # Architecture Overview
 
-The Crypto Platform follows a **Medallion Architecture** (Bronze → Silver → Gold) with a hybrid streaming + batch design.
+The Crypto Platform follows a **Medallion Architecture** (Bronze → Silver → Gold) with a hybrid streaming + batch design and OLAP analytics via ClickHouse.
 
 ## High-Level Architecture
 
@@ -27,10 +27,14 @@ flowchart TB
         PYSPARK["PySpark\nbronze → silver transformer"]
     end
 
+    subgraph OLAP["OLAP Layer (Phase 3)"]
+        LOADER["olap/loader.py\nMinIO → ClickHouse"]
+        CH["ClickHouse\nReplacingMergeTree"]
+        DBT["dbt models\nstaging → gold marts"]
+    end
+
     subgraph FUTURE["Future Phases"]
-        GOLD["Gold Layer\ndbt models, analytics-ready"]
         FLINK["Flink\nWindowed aggregations"]
-        OLAP["ClickHouse\nOLAP queries"]
         SEMANTIC["Semantic Layer\nMetrics + dimensions"]
         ML["ML Pipeline\nFeature store + model serving"]
     end
@@ -45,12 +49,12 @@ flowchart TB
     BRONZE --> PYSPARK
     PYSPARK --> SILVER
 
-    BRONZE -.-> GOLD
-    SILVER -.-> GOLD
-    GOLD -.-> FLINK
-    GOLD -.-> OLAP
-    GOLD -.-> SEMANTIC
-    GOLD -.-> ML
+    SILVER --> LOADER --> CH
+    CH --> DBT
+
+    DBT -.-> FLINK
+    DBT -.-> SEMANTIC
+    DBT -.-> ML
 
     style FUTURE fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5
 ```
@@ -62,8 +66,8 @@ The platform organizes data in three tiers:
 | Layer | Format | Purpose | Partitioning |
 |-------|--------|---------|--------------|
 | **Bronze** | Parquet | Raw data exactly as received | `symbol/`, `topic/`, `year/`, `month/`, `day/` |
-| **Silver** | Parquet | Deduplicated, typed, cleaned | `symbol/`, `interval/`, `year/`, `month/` |
-| **Gold** | Parquet/SQL | Aggregated, analytics-ready | TBD (Phase 3) |
+| **Silver** | Parquet + ClickHouse | Deduplicated, typed, cleaned | `symbol/`, `interval/`, `year/`, `month/` |
+| **Gold** | ClickHouse tables | Aggregated, analytics-ready | `symbol/`, `trade_date` / `hour_at` |
 
 ### Bronze Layer
 
@@ -75,17 +79,25 @@ The platform organizes data in three tiers:
 
 ### Silver Layer
 
-- Written by PySpark batch jobs reading from bronze
-- **Deduplication** by `symbol + open_time` (klines) or `symbol + trade_id` (trades)
-- Type casting (strings → decimals, timestamps → longs)
-- Partitioned by `symbol/interval/year/month` for optimal query patterns
-- Overwrites partitions atomically
+- **Parquet**: Written by PySpark batch jobs reading from bronze
+  - **Deduplication** by `symbol + open_time` (klines) or `symbol + trade_id` (trades)
+  - Type casting (strings → decimals, timestamps → longs)
+  - Partitioned by `symbol/interval/year/month` for optimal query patterns
+  - Overwrites partitions atomically
+- **ClickHouse**: Loaded by `olap/loader.py` from MinIO silver Parquet
+  - `ReplacingMergeTree(_loaded_at)` engine for idempotent loads
+  - Partitioned by `(symbol, toYYYYMM(open_time))`
+  - Ordered by `(symbol, interval, open_time)`
 
-### Gold Layer (Planned)
+### Gold Layer (Phase 3 — In Progress)
 
-- dbt models consuming silver data
-- Pre-computed aggregations, technical indicators, feature tables
-- Query-optimized materialized views for OLAP and ML
+- dbt models consuming ClickHouse silver data
+- **Staging**: `stg_crypto__klines` — typed view with surrogate keys
+- **Marts**:
+  - `fct_daily_klines` — daily OHLCV aggregates
+  - `fct_hourly_klines` — hourly OHLCV aggregates
+  - `fct_kline_returns` — log returns per bar
+- Query-optimized tables for OLAP and downstream consumption
 
 ## Design Principles
 
@@ -94,17 +106,20 @@ The platform organizes data in three tiers:
 3. **Schema evolution** — Parquet + PySpark handles schema changes gracefully.
 4. **Decoupled components** — Kafka decouples producers from consumers. Each component can be restarted independently.
 5. **Local-first development** — Everything runs on a single machine with Docker. No cloud dependencies for development.
+6. **Medallion consistency** — Bronze → Silver → Gold naming maps directly to MinIO buckets and ClickHouse databases.
 
 ## Component Map
 
 | Component | Technology | Location | Purpose |
 |-----------|-----------|----------|---------|
-| WebSocket client | `confluent-kafka` + `websockets` | `src/ingestion/ws_client.py` | Live Binance data stream |
-| Kafka producer | `confluent-kafka` | `src/ingestion/ws_client.py` | Publish to Kafka topics |
-| Lake writer | `confluent-kafka` + `pyarrow` | `src/ingestion/lake_writer.py` | Kafka → bronze Parquet |
-| REST backfiller | `httpx` + `pyarrow` | `src/batch/binance_rest.py` | Historical data → bronze |
-| Silver transformer | PySpark | `src/batch/kline_transformer.py` | Bronze → silver dedup |
-| Config | Pydantic v2 | `src/ingestion/config.py`, `src/batch/config.py` | Typed, validated settings |
+| WebSocket client | `confluent-kafka` + `websockets` | `src/ingestion/producer/ws_client.py` | Live Binance data stream |
+| Kafka producer | `confluent-kafka` | `src/ingestion/producer/ws_client.py` | Publish to Kafka topics |
+| Lake writer | `confluent-kafka` + `pyarrow` | `src/ingestion/writer/lake_writer.py` | Kafka → bronze Parquet |
+| REST backfiller | `httpx` + `pyarrow` | `src/batch/backfill/binance_rest.py` | Historical data → bronze |
+| Silver transformer | PySpark | `src/batch/silver/kline_transformer.py` | Bronze → silver dedup |
+| OLAP loader | `clickhouse-connect` + `pyarrow` | `src/olap/loader.py` | MinIO silver → ClickHouse |
+| dbt models | `dbt-clickhouse` | `dbt/models/` | Silver → gold SQL transforms |
+| Config | Pydantic v2 | `src/ingestion/config.py`, `src/batch/config.py`, `src/olap/config.py` | Typed, validated settings |
 | Shared utils | Various | `src/utils/` | Logging, retry, S3 access |
 
 ## Infrastructure
@@ -115,3 +130,5 @@ The platform organizes data in three tiers:
 | Kafka UI | 8080 | Web UI for topic inspection |
 | MinIO API | 9000 | S3-compatible object storage API |
 | MinIO Console | 9001 | Web UI for bucket browsing |
+| ClickHouse HTTP | 8123 | ClickHouse HTTP interface (OLAP queries, dbt) |
+| ClickHouse TCP | 9009 | ClickHouse native TCP (internal replication) |
