@@ -28,3 +28,4 @@ Content catalog of all wiki pages. Read this first to find relevant docs, then d
 | [decisions/adr-006-utils-package.md](decisions/adr-006-utils-package.md) | `src/utils/` for cross-cutting helpers (logging, retry, storage) — distinct from `core/` which is for domain logic |
 | [decisions/adr-007-pyspark-local-mode.md](decisions/adr-007-pyspark-local-mode.md) | PySpark `local[*]` for Phase 2 silver — no cluster overhead; Delta Lake deferred to Phase 4 |
 | [decisions/adr-008-httpx-rest-client.md](decisions/adr-008-httpx-rest-client.md) | `httpx` over `requests`/`aiohttp` — native async, first-class `pytest-httpx` mock support |
+| [decisions/adr-009-clickhouse-olap.md](decisions/adr-009-clickhouse-olap.md) | ClickHouse over DuckDB for OLAP — server-mode, Cube.js-compatible, ReplacingMergeTree for idempotent loads |

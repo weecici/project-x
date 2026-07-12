@@ -105,3 +105,71 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 - Created ADR-008 (`httpx` over `requests`/`aiohttp`).
 - Updated `project-structure.md` to reflect Phase 2 full layout.
 - Updated `INDEX.md` with ADRs 006–008.
+
+## [2026-07-09] phase-3 | OLAP + dbt
+
+**Structural fixes**
+- Corrected all stale `.wiki/` → `.agents/wiki/` path references in AGENTS.md and project-structure.md.
+- Corrected `dbt_project/` → `dbt/` reference in AGENTS.md planned block.
+- Updated AGENTS.md state line to "Phase 2 complete. Phase 3 (OLAP + dbt) in progress."
+- Updated AGENTS.md architecture block to show Phases 1–3 built modules.
+- Updated `justfile` with all phase shortcuts (backfill, silver, load-olap, dbt-run, dbt-test).
+
+**Infrastructure**
+- Added `clickhouse` service to `docker-compose.yaml` (clickhouse/clickhouse-server:25-alpine, mem_limit 512m, HTTP :8123).
+- Added `clickhouse_data` named volume.
+- Created `infra/clickhouse/init/01_schema.sql` — DDL for `crypto.klines_raw` (ReplacingMergeTree).
+
+**`src/olap/` — MinIO silver → ClickHouse loader**
+- Created `olap/config.py` — `OlapConfig` (ClickHouse + MinIO silver settings).
+- Created `olap/loader.py` — paginated S3 listing + `clickhouse_connect.insert_arrow()` zero-copy insert; idempotent via ReplacingMergeTree.
+- Created `olap/run_loader.py` — CLI entrypoint (`uv run load-olap`).
+
+**Dependencies**
+- Runtime: `clickhouse-connect>=0.8.0`
+- Dev: `testcontainers[clickhouse]` (added to testcontainers extras)
+
+**dbt project (`dbt/`)**
+- Created `dbt_project.yml` — staging (view) + gold (table) materialisations.
+- Created `profiles.yml` — ClickHouse HTTP driver, all env-var based.
+- Created `packages.yml` — `dbt_utils` for expression tests.
+- Created `macros/generate_schema_name.sql` — forces all models into single `crypto` DB.
+- Created `models/sources.yml` — `crypto.klines_raw` source with column tests.
+- Created `models/staging/_staging.yml` + `stg_klines.sql` — typed view, stable contract.
+- Created `models/gold/_gold.yml` — docs + `high >= low`, `volume >= 0` tests.
+- Created `models/gold/ohlcv_daily.sql` — daily OHLCV (argMin/argMax + toDate).
+- Created `models/gold/ohlcv_hourly.sql` — hourly OHLCV (toStartOfHour).
+- Created `models/gold/price_returns.sql` — log returns via ClickHouse `neighbor()`.
+
+**Tests**
+- Created `tests/unit/olap/test_olap_config.py` — 5 tests for OlapConfig.
+- Created `tests/integration/test_olap_loader.py` — 3 integration tests (testcontainers ClickHouse + MinIO): row count, queryability, idempotency.
+- All 57 unit tests green.
+
+**Wiki**
+- Created ADR-009 (ClickHouse over DuckDB — rationale, table design, dbt schema strategy).
+- Updated `INDEX.md` with ADR-009.
+- Fully rewrote `project-structure.md` to reflect Phase 3 layout with correct paths.
+
+## [2026-07-12] phase-3-refinement | dbt reorganise, lag window, OOM resolution
+
+**dbt Refactoring & Styling**
+- Moved facts from `dbt/models/gold/` to `dbt/models/marts/` and renamed models to follow naming standards:
+  - `fct_daily_klines.sql` (renamed from `fct_ohlcv_daily.sql`)
+  - `fct_hourly_klines.sql` (renamed from `fct_ohlcv_hourly.sql`)
+  - `fct_kline_returns.sql` (renamed from `fct_price_returns.sql`)
+- Deleted the empty `dbt/models/gold/` directory.
+- Re-organized staging models under `dbt/models/staging/crypto/`:
+  - `sources.yml` (renamed from `_sources.yml`)
+  - `staging.yml` (renamed from `_stg_crypto__models.yml`)
+- Created `dbt/models/marts/marts.yml` for fact model tests and documentation.
+- Replaced ClickHouse's deprecated `neighbor()` with standard SQL `lag` + `nullIf` window functions in `fct_kline_returns.sql`.
+- Added the `FINAL` modifier to staging view source references to guarantee correct deduplication of keys during queries.
+
+**OLAP Loader & Container Infrastructure**
+- Replaced folder-based DDL file with python-driven `KLINES_RAW_DDL` block in `src/olap/schema.py` and dynamic database/table initialization in `src/olap/loader.py`.
+- Formatted PyArrow tables in `loader.py` to use `_SILVER_SCHEMA` casting, aligning PyArrow timestamp and decimal types with ClickHouse fields and preventing test data merge errors.
+- Resolved local OOM errors by limiting dbt concurrency (`threads: 1`), capping ClickHouse query thread count (`<max_threads>2</max_threads>` in `custom-users.xml`), and raising the container memory limit to `2048m` in `docker-compose.yaml`.
+
+**Wiki**
+- Updated `project-structure.md` in the wiki to document the refactored directory structure.

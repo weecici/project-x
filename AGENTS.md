@@ -4,7 +4,7 @@
 
 Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model. See `GUIDE.md` for the full 311-line blueprint.
 
-**Current state**: Phase 1 complete. Phase 2 (Batch + Lake Maturation) in progress.
+**Current state**: Phase 2 complete. Phase 3 (OLAP + dbt) in progress.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -43,6 +43,10 @@ uv run write-lake                           # Kafka → bronze
 uv run backfill                             # REST historical → bronze Parquet
 uv run silver                               # PySpark bronze → silver (dedup, cast, partition)
 
+# OLAP (Phase 3)
+uv run load-olap
+dbt-run
+
 # Tests
 uv run pytest tests/unit/ -v                # fast, no Docker required
 uv run pytest tests/integration/ -v        # requires Docker daemon
@@ -51,24 +55,20 @@ uv run pytest tests/e2e/ -v -m e2e         # requires full compose stack + runni
 
 ## Architecture
 
-Phase 1 directory structure (built — see `.agents/wiki/structure/project-structure.md` for full layout):
+Phase 1 + 2 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
-src/ingestion/       → Binance WS → Kafka producer + Kafka → MinIO lake writer
-src/utils/           → shared cross-phase utilities (logging, retry, S3 factory)
-tests/               → unit / integration (testcontainers) / e2e
-.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-008)
-```
-
-**Phase 2 (in progress)**:
-```
-src/batch/           → REST historical backfill → bronze; PySpark silver transformer
+src/ingestion/              → Binance WS → Kafka producer + Kafka → MinIO lake writer
+src/batch/                  → REST historical backfill → bronze; PySpark silver transformer
+src/utils/                  → shared cross-phase utilities (logging, retry, S3 factory)
+src/olap/                   → MinIO silver → ClickHouse loader
+dbt/                        → silver → gold SQL models (dbt + ClickHouse)
+tests/                      → unit / integration (testcontainers) / e2e
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-009)
 ```
 
 **Planned** (future phases):
 ```
-src/batch/           → PySpark backfill + feature history (Phase 2)
-dbt_project/         → silver → gold SQL models (Phase 3)
 src/streaming/       → Flink windowed aggregation jobs (Phase 4)
 src/ml/              → features, training, optimization, serving (Phases 8–9)
 src/orchestration/   → Airflow DAGs (Phase 6)

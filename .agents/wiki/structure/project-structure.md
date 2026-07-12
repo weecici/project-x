@@ -4,15 +4,15 @@
 crypto-platform/
 ├── README.md
 ├── AGENTS.md                             # developer + LLM rules
-├── docker-compose.yaml                   # Kafka + MinIO + kafka-ui + mc-init
-├── .env.example                          # all env vars documented
+├── docker-compose.yaml                   # Kafka + MinIO + ClickHouse + kafka-ui + mc-init
+├── .env / .env.example                   # all env vars (Phases 1–3 documented)
 ├── .pre-commit-config.yaml               # ruff + mypy hooks
 ├── pyproject.toml                        # deps + ruff/mypy/pytest/mkdocs config
 ├── .python-version                       # 3.13 (pinned)
 ├── justfile                              # task runner shortcuts
 ├── mkdocs.yaml                           # MkDocs Material site config
 │
-├── src/                                  # Python package source root
+├── src/                                  # Python package source root (namespace package)
 │   │
 │   ├── utils/                            # cross-cutting shared utilities
 │   │   ├── __init__.py
@@ -42,6 +42,13 @@ crypto-platform/
 │   │   ├── run_backfill.py               # entrypoint: uv run backfill
 │   │   └── run_silver.py                 # entrypoint: uv run silver
 │   │
+│   ├── olap/                             # Phase 3 — MinIO silver → ClickHouse loader
+│   │   ├── __init__.py
+│   │   ├── config.py                     # OlapConfig (pydantic-settings)
+│   │   ├── schema.py                     # ClickHouse raw table DDL (ReplacingMergeTree)
+│   │   ├── loader.py                     # silver Parquet → ClickHouse (insert_arrow)
+│   │   └── run_loader.py                 # entrypoint: uv run load-olap
+│   │
 │   ├── streaming/                        # Phase 4 — Flink windowed aggregation
 │   │   └── flink_jobs/
 │   │
@@ -57,20 +64,37 @@ crypto-platform/
 │   └── orchestration/                    # Phase 6 — Airflow DAGs
 │       └── airflow_dags/
 │
-├── dbt_project/                          # Phase 3 — silver → gold SQL models
+├── dbt/                                  # Phase 3 — silver → gold SQL models
 │   ├── dbt_project.yml
-│   ├── profiles.yml
+│   ├── profiles.yml                      # ClickHouse HTTP connection (reads env vars)
+│   ├── packages.yml                      # dbt_utils
+│   ├── .gitignore                        # target/, dbt_packages/, logs/
+│   ├── macros/
+│   │   └── generate_schema_name.sql      # overrides target suffix, flat silver/gold DB mapping
 │   └── models/
-│       ├── silver/
-│       └── gold/
+│       ├── staging/
+│       │   └── crypto/
+│       │       ├── sources.yml           # silver.klines_raw source declaration
+│       │       ├── staging.yml           # docs + column tests for staging views
+│       │       └── stg_crypto__klines.sql # typed view inside 'silver' database (uses FINAL)
+│       └── marts/
+│           ├── marts.yml                 # docs + expression tests for gold fact tables
+│           ├── fct_daily_klines.sql      # daily aggregated OHLCV (argMin/argMax)
+│           ├── fct_hourly_klines.sql     # hourly aggregated OHLCV (toStartOfHour)
+│           └── fct_kline_returns.sql     # log returns (standard lag() window function)
 │
-├── infra/                                # Ops, Deployment & Observability
-│   ├── swarm/                            # Docker Swarm configurations
-│   ├── k8s/                              # Kubernetes manifests
-│   ├── observability/                    # Prometheus + Grafana
+├── infra/
+│   ├── clickhouse/
+│   │   ├── config.d/
+│   │   │   └── custom-config.xml         # timezone, listen interface, log overrides
+│   │   └── users.d/
+│   │       └── custom-users.xml          # default DB gold, 256MB query memory caps
+│   ├── swarm/                            # Phase 10 — Docker Swarm configs
+│   ├── k8s/                              # Phase 10 — Kubernetes manifests
+│   ├── observability/                    # Phase 7 — Prometheus + Grafana
 │   │   ├── prometheus/
 │   │   └── grafana/dashboards/
-│   └── metadata/                         # OpenMetadata lineage configs
+│   └── metadata/                         # Phase 6 — OpenMetadata lineage configs
 │
 ├── docs/                                 # MkDocs source (mkdocstrings auto-API)
 │   ├── index.md
@@ -86,31 +110,41 @@ crypto-platform/
 │   │   ├── ingestion/
 │   │   │   ├── test_config.py
 │   │   │   └── test_models.py
-│   │   └── batch/
-│   │       ├── test_batch_config.py
-│   │       ├── test_batch_models.py
-│   │       └── test_binance_rest.py
+│   │   ├── batch/
+│   │   │   ├── test_batch_config.py
+│   │   │   ├── test_batch_models.py
+│   │   │   └── test_binance_rest.py
+│   │   └── olap/
+│   │       └── test_olap_config.py
 │   ├── integration/
 │   │   ├── test_kafka_roundtrip.py
 │   │   ├── test_minio_writer.py
-│   │   └── test_silver_spark.py
+│   │   ├── test_silver_spark.py
+│   │   └── test_olap_loader.py
 │   └── e2e/
 │       ├── test_phase1_pipeline.py
 │       └── test_phase2_backfill.py
 │
-└── .wiki/                                # LLM-owned wiki documentation
-    ├── INDEX.md
-    ├── LOG.md
-    ├── decisions/
-    │   ├── adr-001-kafka-kraft.md
-    │   ├── adr-002-confluent-kafka.md
-    │   ├── adr-003-phase1-no-flink.md
-    │   ├── adr-004-gpu-profile.md
-    │   ├── adr-005-src-layout.md
-    │   ├── adr-006-utils-package.md
-    │   ├── adr-007-pyspark-local-mode.md
-    │   └── adr-008-httpx-rest-client.md
-    └── structure/
-        ├── phase.md
-        └── project-structure.md
+└── .agents/                              # LLM-owned customization root
+    ├── skills/
+    │   └── git-commit/
+    └── wiki/
+        ├── INDEX.md
+        ├── LOG.md
+        ├── architecture/
+        │   ├── overview.md
+        │   └── breakdown.md
+        ├── decisions/
+        │   ├── adr-001-kafka-kraft.md
+        │   ├── adr-002-confluent-kafka.md
+        │   ├── adr-003-phase1-no-flink.md
+        │   ├── adr-004-gpu-profile.md
+        │   ├── adr-005-src-layout.md
+        │   ├── adr-006-utils-package.md
+        │   ├── adr-007-pyspark-local-mode.md
+        │   ├── adr-008-httpx-rest-client.md
+        │   └── adr-009-clickhouse-olap.md
+        └── structure/
+            ├── phase.md
+            └── project-structure.md
 ```
