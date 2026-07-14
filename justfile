@@ -25,6 +25,12 @@ silver:
 load-olap:
     uv run load-olap
 
+stream-ohlcv:
+    uv run stream-ohlcv
+
+stream-vwap:
+    uv run stream-vwap
+
 dbt-deps:
     cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt deps
 
