@@ -29,7 +29,7 @@ def e2e_config() -> BatchConfig:
     end = date.today()
     start = end - timedelta(days=7)
     return BatchConfig(
-        _env_file=None,
+        _env_file=None,  # type: ignore[call-arg]
         symbols=["BTCUSDT"],
         kline_intervals=["1h"],
         backfill_start_date=start.isoformat(),

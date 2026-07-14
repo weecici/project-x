@@ -34,7 +34,7 @@ def silver_config(minio_container: MinioContainer) -> BatchConfig:
     """Return a BatchConfig wired to the testcontainer MinIO."""
     cfg = minio_container.get_config()
     return BatchConfig(
-        _env_file=None,
+        _env_file=None,  # type: ignore[call-arg]
         minio_endpoint=f"http://{cfg['endpoint']}",
         minio_access_key=cfg["access_key"],
         minio_secret_key=cfg["secret_key"],

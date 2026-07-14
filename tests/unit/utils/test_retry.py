@@ -12,7 +12,7 @@ async def test_retry_succeeds_on_first_attempt() -> None:
     """Function that succeeds immediately should be called exactly once."""
     call_count = 0
 
-    @async_retry(max_attempts=3, min_wait=0.01, max_wait=0.1)  # type: ignore[untyped-decorator]
+    @async_retry(max_attempts=3, min_wait=0.01, max_wait=0.1)
     async def succeeds() -> str:
         nonlocal call_count
         call_count += 1
@@ -29,7 +29,7 @@ async def test_retry_retries_on_transient_failure() -> None:
     """Function that fails twice then succeeds should be called three times."""
     call_count = 0
 
-    @async_retry(max_attempts=5, min_wait=0.01, max_wait=0.1)  # type: ignore[untyped-decorator]
+    @async_retry(max_attempts=5, min_wait=0.01, max_wait=0.1)
     async def flaky() -> str:
         nonlocal call_count
         call_count += 1
@@ -48,7 +48,7 @@ async def test_retry_reraises_after_max_attempts() -> None:
     """Function that always fails should raise after exhausting max_attempts."""
     call_count = 0
 
-    @async_retry(max_attempts=3, min_wait=0.01, max_wait=0.1)  # type: ignore[untyped-decorator]
+    @async_retry(max_attempts=3, min_wait=0.01, max_wait=0.1)
     async def always_fails() -> None:
         nonlocal call_count
         call_count += 1

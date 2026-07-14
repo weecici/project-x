@@ -83,7 +83,7 @@ def olap_config(
     minio_cfg = minio_container.get_config()
 
     return OlapConfig(
-        _env_file=None,
+        _env_file=None,  # type: ignore[call-arg]
         clickhouse_host=ch_host,
         clickhouse_port=ch_port,
         clickhouse_db="silver",
