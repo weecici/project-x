@@ -21,11 +21,13 @@ dependencies = [
 ]
 
 [project.scripts]
-produce    = "ingestion.run_producer:cli"
-write-lake = "ingestion.run_lake_writer:cli"
-backfill   = "batch.run_backfill:cli"
-silver     = "batch.run_silver:cli"
-load-olap  = "olap.run_loader:cli"
+produce      = "ingestion.run_producer:cli"
+write-lake   = "ingestion.run_lake_writer:cli"
+backfill     = "batch.run_backfill:cli"
+silver       = "batch.run_silver:cli"
+load-olap    = "olap.run_loader:cli"
+stream-ohlcv = "streaming.run_ohlcv:cli"
+stream-vwap  = "streaming.run_vwap:cli"
 
 [dependency-groups]
 dev = [
