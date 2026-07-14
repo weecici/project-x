@@ -4,7 +4,7 @@
 
 Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model. See `GUIDE.md` for the full 311-line blueprint.
 
-**Current state**: Phase 2 complete. Phase 3 (OLAP + dbt) in progress.
+**Current state**: Phase 4 complete. Phase 5 (Semantic Layer + BI) in progress.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -35,27 +35,36 @@ docker compose ps                 # check service health
 # Lint + type check via Just or directly
 pre-commit run
 
-# Run ingestion (Phase 1)
+# Ingestion (Phase 1)
 uv run produce                              # Binance WebSocket → Kafka producer
 uv run write-lake                           # Kafka → bronze
 
-# Run batch (Phase 2)
+# Batch processing (Phase 2)
 uv run backfill                             # REST historical → bronze Parquet
 uv run silver                               # PySpark bronze → silver (dedup, cast, partition)
 
 # OLAP (Phase 3)
-uv run load-olap
+uv run load-olap                            # silver → OLAP silver
 dbt-run
 
+# Stream processing (Phase 4)
+uv run stream-ohlcv                         # Kafka → silver
+uv run stream-vwap                          # Kafka → silver
+
 # Tests
-uv run pytest tests/unit/ -v                # fast, no Docker required
+uv run pytest tests/unit/ -v               # fast, no Docker required
 uv run pytest tests/integration/ -v        # requires Docker daemon
 uv run pytest tests/e2e/ -v -m e2e         # requires full compose stack + running processes
+
+# Check code
+just check          # ruff check
+just format         # ruff format
+just mypy           # mypy
 ```
 
 ## Architecture
 
-Phase 1 + 2 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
+Phase 1 to 4 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
 src/ingestion/              → Binance WS → Kafka producer + Kafka → MinIO lake writer
@@ -63,13 +72,13 @@ src/batch/                  → REST historical backfill → bronze; PySpark sil
 src/utils/                  → shared cross-phase utilities (logging, retry, S3 factory)
 src/olap/                   → MinIO silver → ClickHouse loader
 dbt/                        → silver → gold SQL models (dbt + ClickHouse)
+src/streaming/              → PySpark Structured Streaming (OHLCV, VWAP, metrics) → silver (Delta Lake)
 tests/                      → unit / integration (testcontainers) / e2e
-.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-009)
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-010)
 ```
 
 **Planned** (future phases):
 ```
-src/streaming/       → Flink windowed aggregation jobs (Phase 4)
 src/ml/              → features, training, optimization, serving (Phases 8–9)
 src/orchestration/   → Airflow DAGs (Phase 6)
 infra/observability/ → Prometheus + Grafana configs (Phase 7)
