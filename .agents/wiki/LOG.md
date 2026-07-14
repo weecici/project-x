@@ -173,3 +173,22 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 
 **Wiki**
 - Updated `project-structure.md` in the wiki to document the refactored directory structure.
+
+## [2026-07-14] phase-4-implementation | PySpark Structured Streaming
+
+**Stream Processing Implementation**
+- Created `src/streaming/config.py` with validated `StreamingConfig` using Pydantic settings.
+- Developed stateless `ohlcv_stream.py` aggregating raw Binance closed klines to Delta Lake (`s3a://silver/klines_stream`) and Kafka topic (`agg.klines`).
+- Developed stateful `vwap_stream.py` with 10s watermarking and dropDuplicatesWithinWatermark stateful deduplication. Computes 1m rolling VWAP, OFI, price volatility, and trade count, sinking to Delta Lake (`s3a://silver/vwap_stream`) and Kafka topic (`agg.vwap`).
+- Implemented CLI scripts `stream-ohlcv` and `stream-vwap` with logging initialization and graceful SparkSession query termination.
+- Enabled regex topic subscriptions (`subscribePattern`) in Spark streaming readers to allow graceful startups prior to Kafka topics being created.
+- Integrated Delta Lake packages `io.delta:delta-spark_2.13:4.3.1` (Python 3.13 / Spark 4.0.0 compatible) in Spark sessions.
+
+**Tests & Validation**
+- Created unit tests `test_streaming_config.py`.
+- Developed integration tests `test_stream_ohlcv.py` and `test_stream_vwap.py` using Kafka + MinIO testcontainers, asserting aggregate accuracy and window boundaries.
+- Handled active singleton JVM SparkSession teardown during test suites to prevent port conflicts.
+
+**Wiki & Documentation**
+- Created ADR-010 detailing the architectural pivot from Flink to PySpark Structured Streaming due to Python 3.13 limitations.
+- Updated `INDEX.md` and `project-structure.md` to document the completed Phase 4 streaming layout.

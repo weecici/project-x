@@ -47,15 +47,16 @@ across all 16 available CPU cores.
 Delta Lake (`delta-spark`) is **not** introduced in Phase 2. Reasons:
 
 1. Delta adds ACID semantics and time-travel — features that have value only when
-   multiple writers exist simultaneously (Phase 4: Flink + Spark concurrent writes).
+   multiple writers exist or when streaming tables are read/written concurrently
+   (Phase 4: Spark Structured Streaming concurrent writes).
 2. Adding `delta-spark` increases PySpark startup time and JAR resolution complexity
    with no benefit in a Parquet-only Phase 2 pipeline.
-3. Delta is introduced in Phase 4 as part of the Flink streaming work.
+3. Delta is introduced in Phase 4 as part of the Spark Structured Streaming work.
 
 ## Consequences
 
 - No new Docker Compose services needed for Phase 2.
 - Silver transformer is invoked via `uv run silver` — PySpark starts, runs, and stops.
 - Memory knobs (`SPARK_DRIVER_MEMORY`, `SPARK_EXECUTOR_MEMORY`) are env-var controlled.
-- Phase 4 will add Delta Lake; the silver write path in `kline_transformer.py` will be
+- Phase 4 will add Delta Lake; the silver write path will be updated to write Delta tables when stream processing is enabled.
   updated to `format("delta")` at that point.

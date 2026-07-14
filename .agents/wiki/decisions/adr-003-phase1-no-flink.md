@@ -24,3 +24,9 @@ Flink is deferred to Phase 4, which is dedicated to stream processing. In Phases
 | ✅ | Python LakeWriter is independently unit-testable without JVM services |
 | ⚠️ | Bronze files in Phase 1 lack event-time windowing — they are raw append-only dumps |
 | ⚠️ | Flink is introduced later; don't mistake this for "we're skipping Flink" |
+
+---
+
+## Status Update (2026-07-13)
+
+Upon entering Phase 4, the platform team pivoted from Apache Flink to **PySpark Structured Streaming** for real-time aggregation. The primary driver was Python 3.13 host compatibility (PyFlink lacks official PyPI wheels for 3.13), along with the benefit of reclaiming ~2GB of container overhead by running Spark streaming in local mode alongside the existing Spark installation. Delta Lake transaction logs and stream processing are fully implemented via PySpark.

@@ -49,8 +49,15 @@ crypto-platform/
 │   │   ├── loader.py                     # silver Parquet → ClickHouse (insert_arrow)
 │   │   └── run_loader.py                 # entrypoint: uv run load-olap
 │   │
-│   ├── streaming/                        # Phase 4 — Flink windowed aggregation
-│   │   └── flink_jobs/
+│   ├── streaming/                        # Phase 4 — PySpark windowed aggregation
+│   │   ├── __init__.py
+│   │   ├── config.py                     # StreamingConfig (pydantic-settings)
+│   │   ├── run_ohlcv.py                  # CLI entrypoint for OHLCV stream
+│   │   ├── run_vwap.py                   # CLI entrypoint for VWAP / metrics stream
+│   │   └── jobs/
+│   │       ├── __init__.py
+│   │       ├── ohlcv_stream.py           # Spark structured streaming job for OHLCV
+│   │       └── vwap_stream.py            # Spark structured streaming job for VWAP / microstructure metrics
 │   │
 │   ├── ml/                               # Phases 8–9 — ML pipeline and serving
 │   │   ├── features/

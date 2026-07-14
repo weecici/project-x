@@ -5,7 +5,7 @@
 | **1** | **Foundation + Ingestion** | Kafka (KRaft), MinIO, kafka-ui | WS producer → Kafka → bronze Parquet in MinIO; pytest suite green |
 | **2** | **Batch + Lake Maturation** | Kafka, MinIO, PySpark standalone | REST historical backfill → bronze; PySpark silver (dedup, schema, Parquet partitioning) |
 | **3** | **OLAP + dbt** | ClickHouse, MinIO, dbt | dbt silver→gold models; queryable ClickHouse; dbt tests passing |
-| **4** | **Stream Processing** | Kafka, Flink (JM + 1 TM), MinIO | Flink OHLCV/VWAP windowed aggregates → silver; Delta Lake enabled |
+| **4** | **Stream Processing** | Kafka, PySpark Structured Streaming, MinIO | PySpark windowed aggregates (OHLCV, VWAP, Order Flow, Volatility) → silver; Delta Lake enabled |
 | **5** | **Semantic Layer + BI** | ClickHouse, Cube.js | Cube metrics API on ClickHouse; Tableau Public dashboard; Excel sanity export |
 | **6** | **Orchestration + Governance** | Airflow (LocalExecutor), OpenMetadata | Airflow DAGs for batch + dbt + retrain; full lineage graph in OpenMetadata |
 | **7** | **Observability** | Prometheus, Grafana | Infra health dashboard; pre-wired ML serving dashboard |

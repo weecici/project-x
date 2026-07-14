@@ -13,7 +13,7 @@ flowchart TB
     end
 
     subgraph STREAM["Stream Processing"]
-        FLINK["Apache Flink\n(windowed OHLCV, VWAP,\norder-flow features)"]
+        SPARK_STREAM["PySpark Structured Streaming\n(windowed OHLCV, VWAP,\norder flow, volatility)"]
     end
 
     subgraph BATCH["Batch Processing"]
@@ -71,9 +71,9 @@ flowchart TB
         K8S["Kubernetes\n(production-style deploy)"]
     end
 
-    WS --> PROD --> KAFKA --> FLINK
+    WS --> PROD --> KAFKA --> SPARK_STREAM
     REST --> SPARK
-    FLINK --> S3
+    SPARK_STREAM --> S3
     SPARK --> S3
     S3 --> DBT --> CH
     S3 --> DBT --> DORIS
@@ -84,7 +84,7 @@ flowchart TB
     AF -.lineage.-> OL --> OM
     DBT -.lineage.-> OL
     KAFKA --> PROM
-    FLINK --> PROM
+    SPARK_STREAM --> PROM
     CH --> PROM
     SERVE --> PROM
     PROM --> GRAF

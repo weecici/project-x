@@ -4,10 +4,10 @@
 ## 1. Ingestion — Apache Kafka
 A Python producer subscribes to the Binance WebSocket and publishes raw trade/kline events into two Kafka topics (`raw.trades`, `raw.klines`). This is your "always-on" real-time backbone — everything downstream that needs freshness reads from Kafka rather than hitting the exchange directly.
 
-## 2. Stream processing — Apache Flink
-Flink consumes from Kafka and computes **true event-time windowed aggregates**: rolling VWAP, 1s/1m/5m OHLCV bars, order-flow imbalance, trade-rate spikes. This is the correct tool for this job specifically because it gives you genuine event-time semantics and stateful streaming — using Spark Structured Streaming here instead would be a defensible alternative, but Flink is the stronger CV signal for "I understand real streaming, not micro-batch."
+## 2. Stream processing — PySpark Structured Streaming
+PySpark Structured Streaming consumes from Kafka and computes **true event-time windowed aggregates**: rolling VWAP, 1-minute OHLCV bars, order-flow imbalance (OFI), and rolling price volatility (standard deviation). PySpark Structured Streaming is selected as the streaming engine to maintain native compatibility with the project's Python 3.13 constraint (which lacks PyFlink wheels), reduce local resource overhead by 2GB of RAM (by avoiding Flink JM/TM containers and running in `local[*]` mode), and unify the batch and streaming engines into a single toolchain.
 
-Flink writes its aggregated output back into Kafka (`agg.klines`) and/or directly to the lake as append-only files.
+PySpark Structured Streaming writes aggregated outputs to Kafka (`agg.klines`, `agg.vwap`) and directly to the silver bucket as Delta Lake tables.
 
 ## 3. Batch processing — Spark / PySpark (+ optional Databricks)
 Spark (via PySpark) does two jobs:
@@ -17,7 +17,7 @@ Spark (via PySpark) does two jobs:
 **Optional stretch:** replicate the backfill job as a notebook on **Databricks Community Edition** (free, real Databricks environment, Delta Lake native). This lets you honestly list Databricks on your CV with something concrete you built in it, without needing a paid workspace.
 
 ## 4 Lake storage — S3 / MinIO, medallion architecture
-- **Bronze**: raw Kafka/Flink dumps and raw REST pulls, as-is, append-only.
+- **Bronze**: raw Kafka dumps and raw REST pulls, as-is, append-only.
 - **Silver**: cleaned, deduplicated, schema-enforced Parquet (or Delta/Iceberg tables if you want to also learn table-format transaction semantics — genuinely worth it, and a strong resume line).
 - **Gold**: business-ready aggregates (per-symbol daily/hourly OHLCV, feature tables) ready for dbt to pick up.
 
@@ -45,8 +45,8 @@ Airflow owns:
 Install the `apache-airflow-providers-openlineage` package so Airflow emits lineage events automatically; dbt also emits OpenLineage events natively. Point both at **OpenMetadata**, which ingests OpenLineage events and gives you a searchable catalog with an actual end-to-end lineage graph (Kafka topic → Spark job → lake table → dbt model → ClickHouse table). This is the single highest-leverage addition for making your project look like it was built by someone who has worked on a real data platform team, not a tutorial follower — very few personal projects bother with data governance at all.
 
 ## 10 Observability — Prometheus + Grafana
-Scrape metrics from Kafka, Flink, Spark, ClickHouse, and your model-serving containers. Build two Grafana dashboards:
-1. **Infra health** — consumer lag, Flink checkpoint duration, ClickHouse query latency.
+Scrape metrics from Kafka, Spark (batch + streaming), ClickHouse, and your model-serving containers. Build two Grafana dashboards:
+1. **Infra health** — consumer lag, Spark streaming micro-batch latency, ClickHouse query latency.
 2. **ML serving health** — request rate, p50/p95/p99 latency, and error rate per serving backend (Triton vs BentoML vs FastAPI) — this is what actually demonstrates MLOps monitoring maturity, not just "I put Grafana in front of a database."
 
 ## 11 Feature engineering — PySpark + Numba
@@ -88,7 +88,7 @@ Don't pick one and skip the others — sequence them as your actual build order:
 
 ## 17 On-premise vs serverless — make this an explicit architecture decision, not just a checkbox
 Write a short "Architecture Decision Record" in your repo:
-- **Core platform (Kafka, Flink, Spark, ClickHouse, Airflow):** self-hosted via Docker/K8s on your own machine or a cheap VPS. Rationale: full control, no vendor lock-in, and it's the only way to actually demonstrate on-prem/self-managed infra skills.
+- **Core platform (Kafka, Spark batch + streaming, ClickHouse, Airflow):** self-hosted via Docker/K8s on your own machine or a cheap VPS. Rationale: full control, no vendor lock-in, and it's the only way to actually demonstrate on-prem/self-managed infra skills.
 - **One genuinely serverless component:** e.g. a lightweight alerting function (price-spike → notification) deployed as an AWS Lambda / GCP Cloud Function behind an API Gateway. Rationale: demonstrates you understand *when* serverless is the right call (bursty, low-frequency, stateless work) rather than defaulting to it everywhere.
 
 This single paragraph in your README does more for a hiring manager than either choice alone would.
