@@ -1,0 +1,18 @@
+views:
+  - name: ohlcv_daily
+    description: "Curated daily OHLCV candlestick data and trading volumes."
+    cubes:
+      - join_path: daily_klines
+        includes:
+          - symbol
+          - trade_date
+          - open
+          - high
+          - low
+          - close
+          - total_volume
+          - total_quote_volume
+          - total_trades
+          - avg_close
+          - max_high
+          - min_low

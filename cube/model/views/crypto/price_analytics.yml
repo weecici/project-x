@@ -1,0 +1,13 @@
+views:
+  - name: price_analytics
+    description: "Log returns and price volatility metrics for quantitative analysis."
+    cubes:
+      - join_path: kline_returns
+        includes:
+          - symbol
+          - interval
+          - open_at
+          - close
+          - log_return
+          - avg_log_return
+          - stddev_log_return

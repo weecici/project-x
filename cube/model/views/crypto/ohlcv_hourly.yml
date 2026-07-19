@@ -1,0 +1,18 @@
+views:
+  - name: ohlcv_hourly
+    description: "Curated hourly OHLCV candlestick data and trading volumes."
+    cubes:
+      - join_path: hourly_klines
+        includes:
+          - symbol
+          - hour_at
+          - open
+          - high
+          - low
+          - close
+          - total_volume
+          - total_quote_volume
+          - total_trades
+          - avg_close
+          - max_high
+          - min_low

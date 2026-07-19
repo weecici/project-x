@@ -1,0 +1,78 @@
+cubes:
+  - name: daily_klines
+    sql_table: gold.fct_daily_klines
+    public: false
+
+    measures:
+      - name: total_volume
+        sql: volume
+        type: sum
+
+      - name: total_quote_volume
+        sql: quote_volume
+        type: sum
+
+      - name: total_trades
+        sql: num_trades
+        type: sum
+
+      - name: avg_close
+        sql: close
+        type: avg
+
+      - name: max_high
+        sql: high
+        type: max
+
+      - name: min_low
+        sql: low
+        type: min
+
+    dimensions:
+      - name: id
+        sql: daily_kline_id
+        type: string
+        primary_key: true
+
+      - name: symbol
+        sql: symbol
+        type: string
+
+      - name: trade_date
+        sql: trade_date
+        type: time
+
+      - name: open
+        sql: open
+        type: number
+
+      - name: high
+        sql: high
+        type: number
+
+      - name: low
+        sql: low
+        type: number
+
+      - name: close
+        sql: close
+        type: number
+
+    pre_aggregations:
+      - name: daily_ohlcv_rollup
+        type: rollup
+        measure_references:
+          - total_volume
+          - total_quote_volume
+          - total_trades
+          - avg_close
+          - max_high
+          - min_low
+        dimension_references:
+          - symbol
+        time_dimension_reference: trade_date
+        granularity: day
+        indexes:
+          - name: main
+            columns:
+              - symbol

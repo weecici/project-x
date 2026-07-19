@@ -1,0 +1,56 @@
+cubes:
+  - name: kline_returns
+    sql_table: gold.fct_kline_returns
+    public: false
+
+    measures:
+      - name: avg_log_return
+        sql: log_return
+        type: avg
+
+      - name: stddev_log_return
+        sql: stddevSamp(log_return)
+        type: number
+
+    dimensions:
+      - name: id
+        sql: kline_return_id
+        type: string
+        primary_key: true
+
+      - name: symbol
+        sql: symbol
+        type: string
+
+      - name: interval
+        sql: interval
+        type: string
+
+      - name: open_at
+        sql: open_at
+        type: time
+
+      - name: close
+        sql: close
+        type: number
+
+      - name: log_return
+        sql: log_return
+        type: number
+
+    pre_aggregations:
+      - name: returns_rollup
+        type: rollup
+        measure_references:
+          - avg_log_return
+          - stddev_log_return
+        dimension_references:
+          - symbol
+          - interval
+        time_dimension_reference: open_at
+        granularity: hour
+        indexes:
+          - name: main
+            columns:
+              - symbol
+              - interval
