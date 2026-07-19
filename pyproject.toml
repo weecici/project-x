@@ -9,8 +9,10 @@ dependencies = [
   "clickhouse-connect>=0.8.0",
   "confluent-kafka>=2.15.0",
   "dbt-clickhouse>=1.10.1",
+  "gspread>=6.2.1",
   "httpx>=0.28.0",
   "loguru>=0.7.3",
+  "pandas>=3.0.3",
   "pyarrow>=24.0.0",
   "pydantic>=2",
   "pydantic-settings>=2.14.2",
@@ -25,9 +27,12 @@ produce      = "ingestion.run_producer:cli"
 write-lake   = "ingestion.run_lake_writer:cli"
 backfill     = "batch.run_backfill:cli"
 silver       = "batch.run_silver:cli"
-load-olap    = "olap.run_loader:cli"
+load-olap    = "olap.loader:cli"
 stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap  = "streaming.run_vwap:cli"
+export-bi    = "olap.exporter:cli"
+
+
 
 [dependency-groups]
 dev = [

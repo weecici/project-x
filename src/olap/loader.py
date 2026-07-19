@@ -6,14 +6,46 @@ from MinIO and inserts them into ClickHouse using the zero-copy Arrow columnar p
 
 from __future__ import annotations
 
+import sys
+
 import clickhouse_connect
 import pyarrow as pa
 import pyarrow.dataset as ds
 from loguru import logger
 from pyarrow.fs import S3FileSystem  # type: ignore[attr-defined]
 
-from olap.config import OlapConfig
-from olap.schema import KLINES_RAW_DDL
+from olap.config import OlapLoaderConfig
+from utils.logging import configure_logging
+
+# DDL for raw kline table inside the silver database.
+# Engine: ReplacingMergeTree(_loaded_at)
+#   Deduplicates by PRIMARY KEY (symbol, interval, open_time) on background merge,
+#   keeping the row with the highest _loaded_at. Idempotent re-loads are safe.
+# Partitioning: (symbol, toYYYYMM(open_time))
+#   Keeps partition files small; enables partition-level pruning in gold models.
+KLINES_RAW_DDL = """
+CREATE TABLE IF NOT EXISTS silver.klines_raw
+(
+    symbol                  LowCardinality(String),
+    interval                LowCardinality(String),
+    open_time               DateTime64(3, 'UTC'),
+    open                    Decimal(18, 8),
+    high                    Decimal(18, 8),
+    low                     Decimal(18, 8),
+    close                   Decimal(18, 8),
+    volume                  Decimal(18, 8),
+    close_time              DateTime64(3, 'UTC'),
+    quote_volume            Decimal(18, 8),
+    num_trades              UInt32,
+    taker_buy_base_volume   Decimal(18, 8),
+    taker_buy_quote_volume  Decimal(18, 8),
+    _loaded_at              DateTime DEFAULT now()
+)
+ENGINE = ReplacingMergeTree(_loaded_at)
+PARTITION BY (symbol, toYYYYMM(open_time))
+ORDER BY (symbol, interval, open_time)
+SETTINGS index_granularity = 8192
+"""
 
 _INSERT_COLUMNS = [
     "symbol",
@@ -50,7 +82,7 @@ _SILVER_SCHEMA = pa.schema(
 )
 
 
-def load_klines(config: OlapConfig) -> int:
+def load_klines(config: OlapLoaderConfig) -> int:
     """Read all silver kline Parquet files from MinIO and load into ClickHouse.
 
     Uses pyarrow.dataset to read Hive-style partitioned folders, automatically
@@ -117,3 +149,31 @@ def load_klines(config: OlapConfig) -> int:
         table=config.clickhouse_table_klines,
     )
     return total_rows
+
+
+def main() -> None:
+    """Run the silver → ClickHouse load for all kline Parquet files."""
+    configure_logging()
+    config = OlapLoaderConfig()
+    logger.info(
+        "OLAP loader starting | host={host}:{port} db={db} bucket={bucket}",
+        host=config.clickhouse_host,
+        port=config.clickhouse_port,
+        db=config.clickhouse_db,
+        bucket=config.minio_bucket_silver,
+    )
+    total = load_klines(config)
+    logger.info("Done | total_rows_inserted={n}", n=total)
+
+
+def cli() -> None:
+    """Synchronous CLI entrypoint (used by [project.scripts])."""
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("OLAP loader stopped by user")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    cli()

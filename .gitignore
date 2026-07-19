@@ -9,11 +9,13 @@ wheels/
 .venv
 *tmp*
 
-# Environment / secrets
+# Environment / secrets / outputs
 .env
+service_account.json
 .idea/
 .vscode/
 *.swp
+.exports/
 
 # Cache
 htmlcov/
