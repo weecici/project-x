@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<datasource formatted-name='cube_connection' inline='true' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <connection class='postgresql' dbname='db' port='15432' server='localhost' username='cube' odbc-connect-string-extras='' one-time-sql='' />
+</datasource>
