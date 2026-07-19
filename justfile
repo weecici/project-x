@@ -1,6 +1,12 @@
 pc:
     uv run pre-commit run
 
+up:
+  docker compose up -d
+
+down:
+  docker compose down
+
 check:
     uv run ruff check .
 
