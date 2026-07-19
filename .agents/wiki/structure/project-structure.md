@@ -11,6 +11,19 @@ crypto-platform/
 ├── .python-version                       # 3.13 (pinned)
 ├── justfile                              # task runner shortcuts
 ├── mkdocs.yaml                           # MkDocs Material site config
+├── cube/                                 # Phase 5 — Cube semantic layer configurations
+│   ├── cube.js                           # global timer/refresh configs
+│   └── model/
+│       ├── cubes/
+│       │   └── crypto/
+│       │       ├── daily_klines.yml      # daily klines cube
+│       │       ├── hourly_klines.yml     # hourly klines cube
+│       │       └── kline_returns.yml     # kline returns cube
+│       └── views/
+│           └── crypto/
+│               ├── ohlcv_daily.yml       # daily OHLCV view exposed to BI
+│               ├── ohlcv_hourly.yml      # hourly OHLCV view exposed to BI
+│               └── price_analytics.yml   # volatility/return view exposed to BI
 │
 ├── src/                                  # Python package source root (namespace package)
 │   │
@@ -42,12 +55,11 @@ crypto-platform/
 │   │   ├── run_backfill.py               # entrypoint: uv run backfill
 │   │   └── run_silver.py                 # entrypoint: uv run silver
 │   │
-│   ├── olap/                             # Phase 3 — MinIO silver → ClickHouse loader
+│   ├── olap/                             # OLAP Layer (loader + semantic exporter)
 │   │   ├── __init__.py
-│   │   ├── config.py                     # OlapConfig (pydantic-settings)
-│   │   ├── schema.py                     # ClickHouse raw table DDL (ReplacingMergeTree)
-│   │   ├── loader.py                     # silver Parquet → ClickHouse (insert_arrow)
-│   │   └── run_loader.py                 # entrypoint: uv run load-olap
+│   │   ├── config.py                     # OlapLoaderConfig + BiExporterConfig
+│   │   ├── loader.py                     # Silver Parquet → ClickHouse loader + CLI
+│   │   └── exporter.py                   # Cube REST API client → CSV / Google Sheets sync + CLI
 │   │
 │   ├── streaming/                        # Phase 4 — PySpark windowed aggregation
 │   │   ├── __init__.py
@@ -123,11 +135,14 @@ crypto-platform/
 │   │   │   └── test_binance_rest.py
 │   │   └── olap/
 │   │       └── test_olap_config.py
+│   │   └── semantic/
+│   │       └── test_semantic_config.py
 │   ├── integration/
 │   │   ├── test_kafka_roundtrip.py
 │   │   ├── test_minio_writer.py
 │   │   ├── test_silver_spark.py
-│   │   └── test_olap_loader.py
+│   │   ├── test_olap_loader.py
+│   │   └── test_bi_export.py
 │   └── e2e/
 │       ├── test_phase1_pipeline.py
 │       └── test_phase2_backfill.py
@@ -150,7 +165,9 @@ crypto-platform/
         │   ├── adr-006-utils-package.md
         │   ├── adr-007-pyspark-local-mode.md
         │   ├── adr-008-httpx-rest-client.md
-        │   └── adr-009-clickhouse-olap.md
+        │   ├── adr-009-clickhouse-olap.md
+        │   ├── adr-010-pyspark-structured-streaming.md
+        │   └── adr-011-cube-semantic-layer.md
         └── structure/
             ├── phase.md
             └── project-structure.md

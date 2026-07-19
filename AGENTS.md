@@ -2,9 +2,9 @@
 
 ## Project
 
-Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model. See `GUIDE.md` for the full 311-line blueprint.
+Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model.
 
-**Current state**: Phase 4 complete. Phase 5 (Semantic Layer + BI) in progress.
+**Current state**: Phase 5 complete. Phase 6 (Orchestration + Governance) in progress.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -51,6 +51,9 @@ dbt-run
 uv run stream-ohlcv                         # Kafka → silver
 uv run stream-vwap                          # Kafka → silver
 
+# Semantic & BI (Phase 5)
+uv run export-bi                            # Cube REST API → CSV / Google Sheets sync
+
 # Tests
 uv run pytest tests/unit/ -v               # fast, no Docker required
 uv run pytest tests/integration/ -v        # requires Docker daemon
@@ -64,17 +67,18 @@ just mypy           # mypy
 
 ## Architecture
 
-Phase 1 to 4 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
+Phase 1 to 5 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
 src/ingestion/              → Binance WS → Kafka producer + Kafka → MinIO lake writer
 src/batch/                  → REST historical backfill → bronze; PySpark silver transformer
 src/utils/                  → shared cross-phase utilities (logging, retry, S3 factory)
-src/olap/                   → MinIO silver → ClickHouse loader
+src/olap/                   → ClickHouse database loader + Cube REST exporter
 dbt/                        → silver → gold SQL models (dbt + ClickHouse)
 src/streaming/              → PySpark Structured Streaming (OHLCV, VWAP, metrics) → silver (Delta Lake)
+cube/                       → Cube semantic layer models + configuration
 tests/                      → unit / integration (testcontainers) / e2e
-.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-010)
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-011)
 ```
 
 **Planned** (future phases):

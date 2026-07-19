@@ -192,3 +192,20 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 **Wiki & Documentation**
 - Created ADR-010 detailing the architectural pivot from Flink to PySpark Structured Streaming due to Python 3.13 limitations.
 - Updated `INDEX.md` and `project-structure.md` to document the completed Phase 4 streaming layout.
+
+## [2026-07-15] phase-5-implementation | Semantic Layer + BI Export
+
+**Semantic Layer Configuration**
+- Integrated **Cube.js** (`cubejs/cube:v0.36`) into `docker-compose.yml` mapped to ClickHouse gold database.
+- Created `cube/cube.js` to trigger cache pre-aggregations on a 1-hour background refresh cycle.
+- Defined private cubes in `cube/model/cubes/crypto/` (`daily_klines.yml`, `hourly_klines.yml`, `kline_returns.yml`) with pre-aggregation rollup rollups and composite indexes on `symbol`.
+- Defined public views in `cube/model/views/crypto/` (`ohlcv_daily.yml`, `ohlcv_hourly.yml`, `price_analytics.yml`) exposing clean, governed metric contracts.
+
+**BI Export Package**
+- Added `pandas` as a runtime dependency via `uv add` to handle data exports.
+- Implemented `src/semantic/` package featuring Pydantic settings config, `exporter.py` for ClickHouse query-to-CSV, and a CLI wrapper in `run_export.py`.
+- Added the `export-bi` command directly in `pyproject.toml` console scripts.
+
+**Tests & Wiki**
+- Developed config unit tests and a ClickHouse container integration test for the CSV exporter verifying column formats, directory auto-creation, and row values.
+- Documented choices in `ADR-011` and indexed them within `INDEX.md`, `LOG.md`, and `project-structure.md`.
