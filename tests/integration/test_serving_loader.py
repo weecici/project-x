@@ -1,10 +1,6 @@
-"""Integration tests for the OLAP silver → ClickHouse loader.
+"""Integration tests for the serving ClickHouse loader.
 
-Uses ``testcontainers`` to spin up real ClickHouse and MinIO instances.
-Uploads fixture silver Parquet, runs the loader, and asserts rows are
-queryable from ClickHouse with correct types and counts.
-
-Requires: Docker daemon running.
+Uses ``testcontainers`` to spin up ClickHouse and MinIO.
 """
 
 from __future__ import annotations
@@ -19,7 +15,7 @@ import pytest
 from testcontainers.clickhouse import ClickHouseContainer
 from testcontainers.minio import MinioContainer
 
-from olap.config import OlapConfig
+from olap.config import OlapLoaderConfig
 from olap.loader import load_klines
 from utils.storage import make_s3_client
 
@@ -73,16 +69,16 @@ def minio_container() -> MinioContainer:
 
 
 @pytest.fixture(scope="module")
-def olap_config(
+def loader_config(
     clickhouse_container: ClickHouseContainer,
     minio_container: MinioContainer,
-) -> OlapConfig:
-    """Return OlapConfig wired to the testcontainers."""
+) -> OlapLoaderConfig:
+    """Return OlapLoaderConfig wired to the testcontainers."""
     ch_host = clickhouse_container.get_container_host_ip()
     ch_port = int(clickhouse_container.get_exposed_port(8123))
     minio_cfg = minio_container.get_config()
 
-    return OlapConfig(
+    return OlapLoaderConfig(
         _env_file=None,  # type: ignore[call-arg]
         clickhouse_host=ch_host,
         clickhouse_port=ch_port,
@@ -98,50 +94,49 @@ def olap_config(
 
 
 @pytest.fixture(scope="module")
-def _upload_fixture_parquet(olap_config: OlapConfig) -> None:
+def _upload_fixture_parquet(loader_config: OlapLoaderConfig) -> None:
     """Create silver bucket and upload two-row fixture Parquet."""
     s3 = make_s3_client(
-        endpoint=olap_config.minio_endpoint,
-        access_key=olap_config.minio_access_key,
-        secret_key=olap_config.minio_secret_key,
+        endpoint=loader_config.minio_endpoint,
+        access_key=loader_config.minio_access_key,
+        secret_key=loader_config.minio_secret_key,
     )
-    s3.create_bucket(Bucket=olap_config.minio_bucket_silver)
+    s3.create_bucket(Bucket=loader_config.minio_bucket_silver)
 
     table = pa.Table.from_pylist(_FIXTURE_ROWS)
     buf = io.BytesIO()
     pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
     buf.seek(0)
     s3.put_object(
-        Bucket=olap_config.minio_bucket_silver,
+        Bucket=loader_config.minio_bucket_silver,
         Key="klines/symbol=BTCUSDT/interval=1h/year=2024/month=01/fixture.parquet",
         Body=buf.getvalue(),
     )
 
 
 @pytest.mark.integration
-class TestOlapLoader:
+class TestServingLoader:
     """Integration tests for the silver → ClickHouse loader."""
 
     def test_load_klines_returns_correct_row_count(
-        self, olap_config: OlapConfig, _upload_fixture_parquet: None
+        self, loader_config: OlapLoaderConfig, _upload_fixture_parquet: None
     ) -> None:
         """load_klines should return total rows inserted (2)."""
-        total = load_klines(olap_config)
+        total = load_klines(loader_config)
 
         assert total == 2
 
     def test_rows_queryable_from_clickhouse(
-        self, olap_config: OlapConfig, _upload_fixture_parquet: None
+        self, loader_config: OlapLoaderConfig, _upload_fixture_parquet: None
     ) -> None:
         """Inserted rows should be queryable from ClickHouse."""
         client = clickhouse_connect.get_client(
-            host=olap_config.clickhouse_host,
-            port=olap_config.clickhouse_port,
-            database=olap_config.clickhouse_db,
-            username=olap_config.clickhouse_user,
-            password=olap_config.clickhouse_password,
+            host=loader_config.clickhouse_host,
+            port=loader_config.clickhouse_port,
+            database=loader_config.clickhouse_db,
+            username=loader_config.clickhouse_user,
+            password=loader_config.clickhouse_password,
         )
-        # FINAL forces ReplacingMergeTree dedup for deterministic count
         result = client.query(
             "SELECT count() FROM silver.klines_raw FINAL WHERE symbol = 'BTCUSDT'"
         )
@@ -150,17 +145,17 @@ class TestOlapLoader:
         assert count == 2
 
     def test_second_load_is_idempotent(
-        self, olap_config: OlapConfig, _upload_fixture_parquet: None
+        self, loader_config: OlapLoaderConfig, _upload_fixture_parquet: None
     ) -> None:
-        """Re-running load_klines should not duplicate rows (ReplacingMergeTree)."""
-        load_klines(olap_config)  # second run
+        """Re-running load_klines should not duplicate rows."""
+        load_klines(loader_config)
 
         client = clickhouse_connect.get_client(
-            host=olap_config.clickhouse_host,
-            port=olap_config.clickhouse_port,
-            database=olap_config.clickhouse_db,
-            username=olap_config.clickhouse_user,
-            password=olap_config.clickhouse_password,
+            host=loader_config.clickhouse_host,
+            port=loader_config.clickhouse_port,
+            database=loader_config.clickhouse_db,
+            username=loader_config.clickhouse_user,
+            password=loader_config.clickhouse_password,
         )
         result = client.query(
             "SELECT count() FROM silver.klines_raw FINAL WHERE symbol = 'BTCUSDT'"
