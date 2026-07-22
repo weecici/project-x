@@ -19,9 +19,13 @@ flowchart TB
         SPARK["PySpark"]
     end
 
+    subgraph STREAM["Stream Processing"]
+        SPARK_STREAM["PySpark Structured\nStreaming"]
+    end
+
     subgraph LAKE["Lake (Medallion)"]
         BRONZE["Bronze\n(Raw Parquet)"]
-        SILVER["Silver\n(Deduped)"]
+        SILVER["Silver\n(Parquet + Delta)"]
     end
 
     subgraph OLAP["OLAP + Analytics"]
@@ -31,8 +35,10 @@ flowchart TB
     end
 
     WS --> PROD --> KAFKA --> BRONZE
+    KAFKA --> SPARK_STREAM
     REST --> BF --> BRONZE
     BRONZE --> SPARK --> SILVER
+    SPARK_STREAM --> SILVER
 
     SILVER --> LOADER --> CH
     CH --> DBT
@@ -66,6 +72,10 @@ uv run load-olap      # Silver → ClickHouse
 uv run dbt deps       # Install dbt packages
 uv run dbt run        # Run all dbt models
 uv run dbt test       # Run dbt tests
+
+# 7. Start streaming (Terminal 3 + 4)
+uv run stream-ohlcv   # Kafka → OHLCV Delta + Kafka
+uv run stream-vwap    # Kafka → VWAP Delta + Kafka
 ```
 
 ## Tech Stack
@@ -73,9 +83,9 @@ uv run dbt test       # Run dbt tests
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Python 3.13, uv |
-| Streaming | Apache Kafka (KRaft), confluent-kafka |
+| Streaming | Apache Kafka (KRaft), confluent-kafka, PySpark Structured Streaming |
 | Batch | PySpark, httpx |
-| Storage | MinIO (S3-compatible), Parquet |
+| Storage | MinIO (S3-compatible), Parquet, Delta Lake |
 | OLAP | ClickHouse, clickhouse-connect |
 | Transforms | dbt, dbt-clickhouse |
 | Validation | Pydantic v2 |
@@ -94,7 +104,9 @@ src/
 ├── batch/           # REST backfill + PySpark silver transformer
 │   ├── backfill/    # Binance REST client
 │   └── silver/      # PySpark transformer
-└── olap/            # MinIO silver → ClickHouse loader
+├── olap/            # MinIO silver → ClickHouse loader
+└── streaming/       # PySpark Structured Streaming
+    └── jobs/        # OHLCV + VWAP streaming jobs
 
 dbt/
 ├── models/
@@ -150,8 +162,8 @@ just docs            # Serve docs
 | 1 | Foundation + Ingestion | Done |
 | 2 | Batch + Lake Maturation | Done |
 | 3 | OLAP + dbt | Done |
-| 4 | Stream Processing | Planned |
-| 5 | Semantic Layer + BI | Planned |
+| 4 | Stream Processing | Done |
+| 5 | Semantic Layer + BI | Done |
 | 6 | Orchestration + Governance | Planned |
 | 7 | Observability | Planned |
 | 8 | ML Pipeline | Planned |
