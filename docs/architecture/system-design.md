@@ -109,6 +109,15 @@ src/
     ├── loader.py                   # MinIO silver → ClickHouse loader
     ├── run_loader.py               # Entry point: load-olap command
     └── schema.py                   # ClickHouse DDL (klines_raw)
+└── streaming/                      # Phase 4: Stream processing
+    ├── __init__.py
+    ├── config.py                   # StreamingConfig (Pydantic Settings)
+    ├── run_ohlcv.py                # Entry point: stream-ohlcv command
+    ├── run_vwap.py                 # Entry point: stream-vwap command
+    └── jobs/
+        ├── __init__.py
+        ├── ohlcv_stream.py         # Kline OHLCV streaming job
+        └── vwap_stream.py          # VWAP + microstructure metrics job
 ```
 
 ## Data Models
@@ -209,6 +218,27 @@ BinanceWSMessage = Annotated[
 | `minio_bucket_silver` | `str` | `"silver"` | Silver bucket name |
 | `silver_klines_prefix` | `str` | `"klines/"` | S3 prefix for kline Parquet |
 
+### Streaming Config (`src/streaming/config.py`)
+
+#### StreamingConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `kafka_bootstrap_servers` | `str` | `"localhost:9094"` | Kafka broker address |
+| `kafka_topic_trades` | `str` | `"raw.trades"` | Input topic for trades |
+| `kafka_topic_klines` | `str` | `"raw.klines"` | Input topic for klines |
+| `kafka_topic_agg_klines` | `str` | `"agg.klines"` | Output topic for streaming OHLCV |
+| `kafka_topic_agg_vwap` | `str` | `"agg.vwap"` | Output topic for VWAP metrics |
+| `kafka_starting_offsets` | `str` | `"latest"` | Starting offset for consumers |
+| `minio_endpoint` | `str` | `"http://localhost:9000"` | MinIO endpoint |
+| `minio_access_key` | `str` | `"minioadmin"` | MinIO access key |
+| `minio_secret_key` | `str` | `"minioadmin"` | MinIO secret key |
+| `minio_bucket_silver` | `str` | `"silver"` | Silver bucket name |
+| `spark_driver_memory` | `str` | `"1g"` | Spark driver memory |
+| `spark_executor_memory` | `str` | `"1g"` | Spark executor memory |
+| `stream_watermark_delay_seconds` | `int` | `10` | Late-arriving event tolerance |
+| `stream_window_duration_minutes` | `int` | `1` | Tumbling window duration |
+
 ## Configuration System
 
 All config classes extend `pydantic_settings.BaseSettings`:
@@ -230,3 +260,4 @@ See [Configuration Guide](../guides/configuration.md) for all available options.
 | **Object Storage** | Lake Writer → MinIO | `pyarrow.parquet.write_table()` via `minio.MinIO` |
 | **Arrow Insert** | OLAP Loader → ClickHouse | `clickhouse-connect` `insert_arrow()` (zero-copy) |
 | **SQL Refs** | dbt models | `ref()` and `source()` macros → ClickHouse SQL |
+| **Structured Streaming** | Kafka → Spark → Delta + Kafka | Event-time windows, watermarking, exactly-once via checkpoints |

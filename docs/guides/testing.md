@@ -6,17 +6,30 @@ The platform uses a three-tier testing strategy: unit, integration, and end-to-e
 
 ```
 tests/
-├── unit/                           # Fast, no Docker required
-│   ├── test_ingestion_models.py    # Pydantic model validation
-│   ├── test_batch_models.py        # Batch config/result models
-│   └── test_config.py              # Configuration loading
-├── integration/                    # Requires Docker
-│   ├── test_producer.py            # Kafka producer with testcontainers
-│   ├── test_lake_writer.py         # Kafka → MinIO with testcontainers
-│   └── test_backfill.py            # REST client with mock server
-└── e2e/                            # Requires full compose stack
-    ├── test_live_pipeline.py       # WS → Kafka → MinIO end-to-end
-    └── test_batch_pipeline.py      # REST → bronze → silver end-to-end
+├── unit/
+│   ├── ingestion/
+│   │   ├── test_models.py              # Pydantic model validation
+│   │   └── test_config.py              # IngestionConfig loading
+│   ├── batch/
+│   │   ├── test_batch_models.py        # Batch config/result models
+│   │   ├── test_batch_config.py        # BatchConfig validation
+│   │   └── test_binance_rest.py        # REST client unit tests
+│   ├── streaming/
+│   │   └── test_streaming_config.py    # StreamingConfig defaults + validation
+│   ├── olap/
+│   │   └── test_olap_config.py         # OlapConfig defaults + overrides
+│   └── utils/
+│       └── test_retry.py               # Retry decorator behavior
+├── integration/
+│   ├── test_stream_ohlcv.py            # OHLCV streaming (Kafka + MinIO testcontainers)
+│   ├── test_stream_vwap.py             # VWAP streaming (Kafka + MinIO testcontainers)
+│   ├── test_silver_spark.py            # PySpark silver transformation
+│   ├── test_olap_loader.py             # ClickHouse loader (ClickHouse + MinIO testcontainers)
+│   ├── test_minio_writer.py            # Kafka → MinIO lake writer
+│   └── test_kafka_roundtrip.py         # Kafka producer/consumer roundtrip
+└── e2e/
+    ├── test_phase1_pipeline.py         # WS → Kafka → MinIO end-to-end
+    └── test_phase2_backfill.py         # REST → bronze → silver end-to-end
 ```
 
 ## Running Tests
@@ -35,7 +48,9 @@ Fast, runs in seconds. Tests Pydantic models, config loading, and data validatio
 uv run pytest tests/integration/ -v
 ```
 
-Uses `testcontainers` to spin up real Kafka and MinIO instances. Takes ~30 seconds.
+Uses `testcontainers` to spin up real Kafka, MinIO, and ClickHouse instances. Takes ~30 seconds.
+
+Streaming integration tests spin up Kafka + MinIO testcontainers, produce mock events, run the Spark Structured Streaming job, and verify output in both Delta Lake and Kafka. They handle SparkSession singleton teardown between tests to prevent port conflicts.
 
 ### End-to-End Tests (Requires Full Stack)
 
@@ -56,35 +71,33 @@ uv run pytest -v
 ### Unit Test Example
 
 ```python
-"""Tests for ingestion models."""
+"""Tests for StreamingConfig defaults and validation."""
 
-from src.ingestion.models import Trade, Kline
+from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
 
-def test_trade_model_parses_correctly():
-    """Trade model accepts valid Binance trade data."""
-    data = {
-        "type": "trade",
-        "symbol": "BTCUSDT",
-        "trade_id": 12345,
-        "price": "50000.00",
-        "quantity": "0.001",
-        "trade_time": 1694000000000,
-        "is_buyer_maker": False,
-        "event_time": 1694000000001,
-    }
-    trade = Trade.model_validate(data)
-    assert trade.symbol == "BTCUSDT"
-    assert trade.price == "50000.00"
+from streaming.config import StreamingConfig
 
 
-def test_trade_model_rejects_missing_fields():
-    """Trade model raises ValidationError for incomplete data."""
-    import pytest
-    from pydantic import ValidationError
+def test_default_kafka_topics() -> None:
+    """Default Kafka topics match the design specifications."""
+    config = StreamingConfig(_env_file=None)  # type: ignore[call-arg]
 
+    assert config.kafka_topic_trades == "raw.trades"
+    assert config.kafka_topic_klines == "raw.klines"
+    assert config.kafka_topic_agg_klines == "agg.klines"
+    assert config.kafka_topic_agg_vwap == "agg.vwap"
+
+
+def test_negative_watermark_raises() -> None:
+    """A negative watermark delay must raise a ValidationError."""
     with pytest.raises(ValidationError):
-        Trade.model_validate({"type": "trade", "symbol": "BTCUSDT"})
+        StreamingConfig(
+            _env_file=None,  # type: ignore[call-arg]
+            stream_watermark_delay_seconds=-5,
+        )
 ```
 
 ### Integration Test Example
@@ -99,7 +112,7 @@ from testcontainers.kafka import KafkaContainer
 @pytest.fixture
 def kafka_broker():
     """Spin up a real Kafka broker."""
-    with KafkaContainer("bitnami/kafka:latest") as kafka:
+    with KafkaContainer() as kafka:
         yield kafka.get_bootstrap_server()
 ```
 
@@ -110,6 +123,7 @@ def kafka_broker():
 - **Descriptive names**: `test_<what>_<condition>_<expected>`
 - **`pytest.mark.parametrize`** for variations instead of copy-paste
 - **`pytest.mark.asyncio`** for async tests (auto mode)
+- Config tests use `_env_file=None` to isolate from `.env` file
 
 ## Test Configuration
 

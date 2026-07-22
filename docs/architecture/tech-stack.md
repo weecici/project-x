@@ -20,7 +20,8 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **httpx** | 0.28+ | Async HTTP client (REST API) | Async-native, connection pooling, rate limiting |
 | **pydantic** | 2.x | Data validation + settings | Fast validation, type-safe models |
 | **pydantic-settings** | 2.x | Environment variable config | `.env` + env var loading into Pydantic models |
-| **PySpark** | 3.5+ | Distributed batch processing | Dedup, type casting, partitioning at scale |
+| **PySpark** | 3.5+ | Distributed batch + stream processing | Dedup, type casting, partitioning, Structured Streaming |
+| **delta-spark** | 4.0+ | ACID lake storage on Spark | Open table format, exactly-once writes, Spark integration |
 | **pyarrow** | 24+ | Parquet I/O + S3 filesystem | Arrow-native Parquet, MinIO/S3 integration |
 | **clickhouse-connect** | 0.8+ | ClickHouse HTTP client | Zero-copy Arrow inserts, lightweight |
 | **dbt-clickhouse** | 1.10+ | dbt adapter for ClickHouse | SQL-based transformations on ClickHouse |
@@ -58,7 +59,8 @@ Every tool and library used in the platform, with version, purpose, and rational
 
 | Format | Usage | Why |
 |--------|-------|-----|
-| **Parquet** | Lake storage (bronze, silver) | Columnar, compressed, schema-embedded, Hive-compatible |
+| **Parquet** | Lake storage (bronze, batch silver) | Columnar, compressed, schema-embedded, Hive-compatible |
+| **Delta Lake** | Lake storage (streaming silver) | ACID transactions, exactly-once semantics, schema enforcement |
 | **JSON** | WebSocket messages, Kafka payloads | Human-readable, native Binance format |
 | **JSON Lines** | Structured logging | Newline-delimited JSON for log aggregation |
 | **ClickHouse Native** | OLAP storage | Columnar, vectorized, ReplacingMergeTree engine |

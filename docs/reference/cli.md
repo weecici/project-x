@@ -15,15 +15,15 @@ uv run produce
 | **Input** | Binance WebSocket (live trades + klines) |
 | **Output** | Kafka topics `raw.trades`, `raw.klines` |
 | **Shutdown** | `Ctrl+C` (graceful, flushes pending) |
-| **Config** | `INGESTION_*` env vars |
+| **Config** | `KAFKA_*`, `BINANCE_WS_BASE_URL`, `SYMBOLS`, `KLINE_INTERVALS`, `MINIO_*` env vars |
 
 **What it does:**
 
 1. Connects to Binance WebSocket streams for configured symbols/intervals
-2. Parses each message into a typed Pydantic model (`Trade` or `Kline`)
+2. Parses each message into a typed Pydantic model (`TradeEvent` or `KlineEvent`)
 3. Partitions messages by symbol and publishes to the correct Kafka partition
 4. Handles reconnection automatically on disconnects
-5. Logs message counts per symbol at INFO level
+5. Logs message delivery at DEBUG level
 
 ---
 
@@ -40,15 +40,15 @@ uv run write-lake
 | **Input** | Kafka topics `raw.trades`, `raw.klines` |
 | **Output** | MinIO `bronze/` bucket (Hive-partitioned Parquet) |
 | **Shutdown** | `Ctrl+C` (flushes remaining messages) |
-| **Config** | `INGESTION_*` env vars |
+| **Config** | `KAFKA_*`, `MINIO_*`, `LAKE_FLUSH_ROWS`, `LAKE_FLUSH_SECONDS` env vars |
 
 **What it does:**
 
 1. Starts consuming from all partitions of `raw.trades` and `raw.klines`
 2. Buffers messages in memory
 3. Flushes to MinIO when either threshold is met:
-   - 30 seconds since last flush (`INGESTION_FLUSH_INTERVAL_SECONDS`)
-   - 1,000 messages buffered (`INGESTION_FLUSH_THRESHOLD`)
+    - 30 seconds since last flush (`LAKE_FLUSH_SECONDS`)
+    - 1,000 messages buffered (`LAKE_FLUSH_ROWS`)
 4. Each flush writes a new Parquet file with UUID-based filename
 5. On shutdown, flushes all remaining buffered messages
 
@@ -73,23 +73,21 @@ uv run backfill
 |----------|--------|
 | **Input** | Binance REST API (`/api/v3/klines`) |
 | **Output** | MinIO `bronze/` bucket (Parquet files) |
-| **Config** | `BACKFILL_*` env vars |
+| **Config** | `BINANCE_*`, `SYMBOLS`, `KLINE_INTERVALS`, `BACKFILL_*`, `MINIO_*`, `SPARK_*` env vars |
 
 **What it does:**
 
-1. Splits the date range into configurable chunks (default: 7 days)
-2. Fetches 1000 candles per API request (configurable via `BACKFILL_LIMIT`)
-3. Applies rate limiting (10 tokens/request, 1200 tokens/minute)
-4. Retries failed chunks up to 3 times with exponential backoff
-5. Writes each chunk as a Parquet file to bronze
-6. Reports `BackfillResult` with success/failure counts
+1. Iterates through the date range, fetching up to 1000 bars per API request
+2. Applies rate limiting (2 tokens per request, 1200 tokens/minute)
+3. Retries failed requests up to 5 times with exponential backoff
+4. Writes each chunk as a Parquet file to bronze
+5. Reports the total row count inserted
 
 **Example:**
 
 ```bash
-BACKFILL_SYMBOLS='["BTCUSDT"]' \
-BACKFILL_START_TIME=2026-01-01T00:00:00Z \
-BACKFILL_CHUNK_DAYS=14 \
+SYMBOLS='["BTCUSDT"]' \
+BACKFILL_START_DATE=2024-01-01 \
 uv run backfill
 ```
 
@@ -107,16 +105,16 @@ uv run silver
 |----------|--------|
 | **Input** | MinIO `bronze/klines/**/*.parquet` |
 | **Output** | MinIO `silver/klines/` (overwritten) |
-| **Config** | `SILVER_*` env vars |
+| **Config** | `MINIO_*`, `SPARK_*` env vars |
 
 **What it does:**
 
 1. Reads all bronze kline Parquet files via PySpark
-2. Deduplicates by `symbol + open_time` (keeps latest)
-3. Casts types (strings → decimals, timestamps → longs)
-4. Repartitions (200 partitions) for write performance
-5. Overwrites silver layer atomically (Hive-style)
-6. Reports `SilverResult` with input/output/duplicate counts
+2. Deduplicates by `symbol + interval + open_time` (keeps latest)
+3. Casts types (strings → decimals, longs → timestamps)
+4. Repartitions by `symbol/interval/year/month` (Hive-style partitioning)
+5. Overwrites silver layer atomically
+6. Logs input/output/duplicate counts
 
 **When to run:**
 
@@ -156,6 +154,69 @@ uv run load-olap
 
 ---
 
+## `stream-ohlcv`
+
+Start the OHLCV Structured Streaming job.
+
+```bash
+uv run stream-ohlcv
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | Kafka `raw.klines` topic |
+| **Output** | Delta Lake `s3a://silver/klines_stream/` + Kafka `agg.klines` |
+| **Config** | `KAFKA_*`, `MINIO_*`, `SPARK_*`, `STREAM_*` env vars |
+
+**What it does:**
+
+1. Reads kline JSON from Kafka, parses nested kline schema
+2. Casts OHLCV fields to `DecimalType(18, 8)`
+3. Filters only closed bars (`is_closed == True`)
+4. **Dual-sink**: Writes to Delta Lake + produces to `agg.klines` Kafka topic
+5. Checkpoint-based exactly-once semantics (S3 checkpoints)
+
+**When to run:**
+
+- Run after starting the live producer (`uv run produce`)
+- Streams continuously — kill to stop
+
+---
+
+## `stream-vwap`
+
+Start the VWAP Structured Streaming job.
+
+```bash
+uv run stream-vwap
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | Kafka `raw.trades` topic |
+| **Output** | Delta Lake `s3a://silver/vwap_stream/` + Kafka `agg.vwap` |
+| **Config** | `KAFKA_*`, `MINIO_*`, `SPARK_*`, `STREAM_*` env vars |
+
+**What it does:**
+
+1. Reads trade JSON from Kafka, casts price/quantity to `DoubleType`
+2. Parses `trade_time` (epoch millis) into a `TimestampType` column
+3. Applies event-time watermark on `trade_time_ts`
+4. Deduplicates within watermark using `trade_id` (stateful)
+5. Tumbling window aggregation (1 minute default) computing:
+    - **VWAP**: `sum(price * quantity) / sum(quantity)`
+    - **Order Flow Imbalance**: `sum(qty for taker buys) - sum(qty for maker buys)`
+    - **Price Volatility**: `coalesce(stddev_samp(price), 0.0)`
+    - **Trade Count**: `count(*)`
+6. **Dual-sink**: Writes to Delta Lake + produces to `agg.vwap` Kafka topic
+
+**When to run:**
+
+- Run after starting the live producer (`uv run produce`)
+- Streams continuously — kill to stop
+
+---
+
 ## Justfile Shortcuts
 
 The `justfile` provides shortcut recipes for all commands:
@@ -167,9 +228,11 @@ The `justfile` provides shortcut recipes for all commands:
 | `just backfill` | `uv run backfill` | Backfill historical data |
 | `just silver` | `uv run silver` | Run silver transformation |
 | `just load-olap` | `uv run load-olap` | Load silver → ClickHouse |
-| `just dbt-deps` | `cd dbt && dbt deps` | Install dbt packages |
-| `just dbt-run` | `cd dbt && dbt run` | Run all dbt models |
-| `just dbt-test` | `cd dbt && dbt test` | Run all dbt tests |
+| `just stream-ohlcv` | `uv run stream-ohlcv` | Start OHLCV streaming job |
+| `just stream-vwap` | `uv run stream-vwap` | Start VWAP streaming job |
+| `just dbt-deps` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt deps` | Install dbt packages |
+| `just dbt-run` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt run` | Run all dbt models |
+| `just dbt-test` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt test` | Run all dbt tests |
 | `just pc` | `uv run pre-commit run` | Run pre-commit hooks |
 | `just check` | `uv run ruff check .` | Lint code |
 | `just format` | `uv run ruff format .` | Format code |
@@ -189,6 +252,8 @@ write-lake = "ingestion.run_lake_writer:cli"
 backfill = "batch.run_backfill:cli"
 silver = "batch.run_silver:cli"
 load-olap = "olap.run_loader:cli"
+stream-ohlcv = "streaming.run_ohlcv:cli"
+stream-vwap = "streaming.run_vwap:cli"
 ```
 
 Each `run_*.py` module contains a `cli()` function that:

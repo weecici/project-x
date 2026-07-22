@@ -4,7 +4,7 @@ All configuration is managed through environment variables and `.env` files, val
 
 ## How Configuration Works
 
-All config classes (`IngestionConfig`, `BatchConfig`, `OlapConfig`) extend `pydantic_settings.BaseSettings`:
+All config classes (`IngestionConfig`, `BatchConfig`, `OlapConfig`, `StreamingConfig`) extend `pydantic_settings.BaseSettings`:
 
 1. **Environment variables** are checked first (highest priority)
 2. **`.env` file** is loaded as fallback
@@ -18,14 +18,20 @@ These control the live WebSocket → Kafka → lake pipeline.
 
 | Env Var | Type | Default | Description |
 |---------|------|---------|-------------|
-| `INGESTION_SYMBOLS` | `list[str]` | `["BTCUSDT", "ETHUSDT"]` | Trading pairs to subscribe to |
-| `INGESTION_INTERVALS` | `list[str]` | `["1m"]` | Kline intervals to subscribe to |
-| `INGESTION_WS_URL` | `str` | `wss://stream.binance.com:9443/ws/` | Binance WebSocket endpoint |
-| `INGESTION_KAFKA_BROKER` | `str` | `localhost:9094` | Kafka broker address |
-| `INGESTION_FLUSH_INTERVAL_SECONDS` | `float` | `30.0` | Seconds between lake flushes |
-| `INGESTION_FLUSH_THRESHOLD` | `int` | `1000` | Max messages before forced flush |
-| `INGESTION_KAFKA_POLL_TIMEOUT` | `float` | `0.5` | Kafka consumer poll timeout (seconds) |
-| `INGESTION_LOG_LEVEL` | `str` | `INFO` | Log level (DEBUG, INFO, WARNING, ERROR) |
+| `KAFKA_BOOTSTRAP_SERVERS` | `str` | `localhost:9094` | Comma-separated Kafka bootstrap servers |
+| `KAFKA_TOPIC_TRADES` | `str` | `raw.trades` | Topic containing raw trade events |
+| `KAFKA_TOPIC_KLINES` | `str` | `raw.klines` | Topic containing raw kline events |
+| `KAFKA_DLQ_TRADES` | `str` | `raw.trades.dlq` | Dead-letter topic for trades that fail validation |
+| `KAFKA_DLQ_KLINES` | `str` | `raw.klines.dlq` | Dead-letter topic for klines that fail validation |
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO S3-compatible endpoint |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `MINIO_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
+| `BINANCE_WS_BASE_URL` | `str` | `wss://stream.binance.com:9443` | Binance combined-stream WebSocket base URL |
+| `SYMBOLS` | `list[str]` | `["BTCUSDT", "ETHUSDT"]` | Trading-pair symbols to subscribe to |
+| `KLINE_INTERVALS` | `list[str]` | `["1m"]` | Kline intervals to subscribe to |
+| `LAKE_FLUSH_ROWS` | `int` | `1000` | Flush to MinIO after this many buffered rows |
+| `LAKE_FLUSH_SECONDS` | `int` | `30` | Flush to MinIO after this many seconds |
 
 **Kafka Topics:**
 
@@ -33,14 +39,15 @@ These control the live WebSocket → Kafka → lake pipeline.
 |-------|------|
 | `raw.trades` | Live trade events |
 | `raw.klines` | Live kline/candlestick events |
+| `raw.trades.dlq` | Dead-letter queue for invalid trades |
+| `raw.klines.dlq` | Dead-letter queue for invalid klines |
 
 **Example `.env`:**
 
 ```bash
-INGESTION_SYMBOLS='["BTCUSDT", "ETHUSDT", "SOLUSDT"]'
-INGESTION_INTERVALS='["1m", "5m", "1h"]'
-INGESTION_FLUSH_INTERVAL_SECONDS=15
-INGESTION_LOG_LEVEL=DEBUG
+SYMBOLS='["BTCUSDT", "ETHUSDT", "SOLUSDT"]'
+KLINE_INTERVALS='["1m", "5m", "1h"]'
+LAKE_FLUSH_SECONDS=15
 ```
 
 ## Batch Configuration
@@ -51,30 +58,25 @@ These control the REST backfill and silver transformation.
 
 | Env Var | Type | Default | Description |
 |---------|------|---------|-------------|
-| `BACKFILL_SYMBOLS` | `list[str]` | `["BTCUSDT"]` | Symbols to backfill |
-| `BACKFILL_INTERVALS` | `list[str]` | `["1m"]` | Kline intervals to backfill |
-| `BACKFILL_START_TIME` | `datetime` | 30 days ago | Backfill start (ISO format) |
-| `BACKFILL_END_TIME` | `datetime | None` | `None` (latest) | Backfill end, None = now |
-| `BACKFILL_LIMIT` | `int` | `1000` | Max candles per API request |
-| `BACKFILL_MAX_RETRIES` | `int` | `3` | Retry count per chunk |
-| `BACKFILL_CHUNK_DAYS` | `int` | `7` | Days per chunk |
-| `BACKFILL_LOG_LEVEL` | `str` | `INFO` | Log level |
-
-### Silver Transformer Settings
-
-| Env Var | Type | Default | Description |
-|---------|------|---------|-------------|
-| `SILVER_INPUT_PATH` | `str` | `bronze/klines` | Input bronze path |
-| `SILVER_OUTPUT_PATH` | `str` | `silver/klines` | Output silver path |
-| `SILVER_LOG_LEVEL` | `str` | `INFO` | Log level |
+| `BINANCE_REST_BASE_URL` | `str` | `https://api.binance.com` | Base URL for Binance Spot REST API |
+| `BINANCE_API_KEY` | `str` | `""` | Optional Binance API key (raises rate-limit from 1200 to 6000/min) |
+| `SYMBOLS` | `list[str]` | `["BTCUSDT", "ETHUSDT"]` | Trading-pair symbols to backfill |
+| `KLINE_INTERVALS` | `list[str]` | `["1m", "1h", "1d"]` | Kline intervals to backfill |
+| `BACKFILL_START_DATE` | `str` | `2024-01-01` | ISO-8601 date (YYYY-MM-DD); start of historical fetch window |
+| `BACKFILL_END_DATE` | `str` | `""` | ISO-8601 date (YYYY-MM-DD); empty string defaults to today (UTC) |
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO S3-compatible endpoint |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `MINIO_BUCKET_BRONZE` | `str` | `bronze` | Bronze bucket name |
+| `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
+| `SPARK_DRIVER_MEMORY` | `str` | `1g` | JVM heap for the Spark driver process |
+| `SPARK_EXECUTOR_MEMORY` | `str` | `1g` | JVM heap for the Spark executor process |
 
 **Example `.env`:**
 
 ```bash
-BACKFILL_SYMBOLS='["BTCUSDT", "ETHUSDT"]'
-BACKFILL_START_TIME=2026-01-01T00:00:00Z
-BACKFILL_CHUNK_DAYS=14
-SILVER_LOG_LEVEL=DEBUG
+SYMBOLS='["BTCUSDT", "ETHUSDT"]'
+BACKFILL_START_DATE=2024-01-01
 ```
 
 ## OLAP Configuration
@@ -88,12 +90,12 @@ These control the MinIO silver → ClickHouse loader.
 | `CLICKHOUSE_DB` | `str` | `silver` | Target database |
 | `CLICKHOUSE_USER` | `str` | `default` | ClickHouse user |
 | `CLICKHOUSE_PASSWORD` | `str` | `""` | ClickHouse password |
-| `CLICKHOUSE_TABLE_KLINES` | `str` | `klines_raw` | Target table for kline data |
+| `CLICKHOUSE_TABLE_KLINES` | `str` | `klines_raw` | Target ClickHouse table for kline data |
 | `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO endpoint |
 | `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
 | `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
 | `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
-| `SILVER_KLINES_PREFIX` | `str` | `klines/` | S3 prefix for kline Parquet |
+| `SILVER_KLINES_PREFIX` | `str` | `klines/` | S3 prefix under the silver bucket for kline Parquet files |
 
 **Example `.env`:**
 
@@ -125,6 +127,25 @@ CLICKHOUSE_TABLE_KLINES=klines_raw
 | MinIO Console | 9001 | Web console |
 | ClickHouse HTTP | 8123 | HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | Native TCP (internal replication) |
+
+## Streaming
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KAFKA_BOOTSTRAP_SERVERS` | `str` | `localhost:9094` | Comma-separated list of Kafka bootstrap servers |
+| `KAFKA_TOPIC_TRADES` | `str` | `raw.trades` | Topic containing raw tick-by-tick trade executions |
+| `KAFKA_TOPIC_KLINES` | `str` | `raw.klines` | Topic containing raw kline update events |
+| `KAFKA_TOPIC_AGG_KLINES` | `str` | `agg.klines` | Downstream topic for finalized streaming klines |
+| `KAFKA_TOPIC_AGG_VWAP` | `str` | `agg.vwap` | Downstream topic for finalized streaming VWAP/microstructure metrics |
+| `KAFKA_STARTING_OFFSETS` | `str` | `latest` | Starting offsets for Kafka streams (e.g. earliest, latest) |
+| `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO S3-compatible service URL |
+| `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO root access key |
+| `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO root secret key |
+| `MINIO_BUCKET_SILVER` | `str` | `silver` | Bucket where silver Delta tables are written |
+| `SPARK_DRIVER_MEMORY` | `str` | `1g` | JVM heap for the local Spark driver process |
+| `SPARK_EXECUTOR_MEMORY` | `str` | `1g` | JVM heap for the local Spark executor process |
+| `STREAM_WATERMARK_DELAY_SECONDS` | `int` | `10` | Allowed threshold (seconds) for late-arriving trade ticks |
+| `STREAM_WINDOW_DURATION_MINUTES` | `int` | `1` | Duration (minutes) for tumbling aggregation windows |
 
 ## ClickHouse Resource Limits
 

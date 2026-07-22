@@ -143,6 +143,66 @@ sequenceDiagram
      - `fct_hourly_klines`: Hourly OHLCV (same logic, hourly grouping)
      - `fct_kline_returns`: Log returns via `lag()` window function
 
+## Streaming Pipeline (Phase 4)
+
+```mermaid
+sequenceDiagram
+    participant Kafka as Apache Kafka
+    participant OHLCV as stream-ohlcv
+    participant VWAP as stream-vwap
+    participant Delta as Delta Lake (MinIO)
+    participant KafkaOut as Kafka (agg topics)
+
+    Note over OHLCV: Triggered via uv run stream-ohlcv
+
+    Kafka->>OHLCV: raw.klines topic
+    OHLCV->>OHLCV: Parse JSON → filter is_closed=True → cast OHLCV
+    OHLCV->>Delta: Append to s3a://silver/klines_stream/
+    OHLCV->>KafkaOut: Produce to agg.klines topic
+
+    Note over VWAP: Triggered via uv run stream-vwap
+
+    Kafka->>VWAP: raw.trades topic
+    VWAP->>VWAP: Parse JSON → cast → watermark → dedup
+    VWAP->>VWAP: Tumbling window (1m) → VWAP, OFI, volatility
+    VWAP->>Delta: Append to s3a://silver/vwap_stream/
+    VWAP->>KafkaOut: Produce to agg.vwap topic
+```
+
+### Streaming Pipeline Details
+
+1. **OHLCV Stream** (`ohlcv_stream.py`)
+   - Reads from `raw.klines` Kafka topic
+   - Parses JSON against inline schema (kline nested structure)
+   - Filters only closed bars (`is_closed == True`)
+   - Casts OHLCV fields to `DecimalType(18,8)`
+   - **Dual-sink**: Appends to Delta Lake + produces to `agg.klines` Kafka topic
+   - Checkpoint-based exactly-once semantics
+
+2. **VWAP Stream** (`vwap_stream.py`)
+   - Reads from `raw.trades` Kafka topic
+   - Parses JSON, casts price/quantity to `DoubleType`
+   - Applies event-time watermark on `trade_time`
+   - Deduplicates within watermark (`dropDuplicatesWithinWatermark`)
+   - Tumbling window aggregation (1 minute default)
+   - Computes:
+     - **VWAP**: `sum(price * quantity) / sum(quantity)`
+     - **Order Flow Imbalance**: Net taker buy/sell pressure
+     - **Price Volatility**: `stddev_samp(price)`
+     - **Trade Count**: `count(*)`
+   - **Dual-sink**: Appends to Delta Lake + produces to `agg.vwap` Kafka topic
+
+### Key Differences: Batch vs Streaming Silver
+
+| Aspect | Batch (PySpark) | Streaming (Structured Streaming) |
+|--------|-----------------|-----------------------------------|
+| Input | Bronze Parquet (glob) | Kafka topics (real-time) |
+| Output | Silver Parquet (Hive) | Delta Lake + Kafka |
+| Dedup | `dropDuplicates` (full scan) | `dropDuplicatesWithinWatermark` (stateful) |
+| Latency | Minutes (batch) | Seconds (micro-batch) |
+| Trigger | Manual/cron | Continuous |
+| Checkpoint | None | S3-based checkpoints |
+
 ## Data Lineage
 
 ```

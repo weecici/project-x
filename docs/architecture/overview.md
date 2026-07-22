@@ -16,6 +16,11 @@ flowchart TB
         KAFKA["Apache Kafka\nKRaft mode, 3 topics"]
     end
 
+    subgraph STREAM["Stream Processing (Phase 4)"]
+        SPARK_STREAM["PySpark Structured Streaming\nWindowed OHLCV, VWAP, OFI, Volatility"]
+        DELTA["Delta Lake\n(silver on MinIO)"]
+    end
+
     subgraph LAKE["Lake Storage (Phase 1–2)"]
         S3["MinIO S3\nS3-compatible object store"]
         BRONZE["Bronze Layer\nRaw data, Hive-partitioned Parquet"]
@@ -34,7 +39,6 @@ flowchart TB
     end
 
     subgraph FUTURE["Future Phases"]
-        FLINK["Flink\nWindowed aggregations"]
         SEMANTIC["Semantic Layer\nMetrics + dimensions"]
         ML["ML Pipeline\nFeature store + model serving"]
     end
@@ -43,16 +47,18 @@ flowchart TB
     REST --> BACKFILL
 
     KAFKA --> S3
+    KAFKA --> SPARK_STREAM
     BACKFILL --> S3
     S3 --- BRONZE
     PYSPARK --> S3
     BRONZE --> PYSPARK
     PYSPARK --> SILVER
+    SPARK_STREAM --> DELTA
+    SPARK_STREAM --> KAFKA
 
     SILVER --> LOADER --> CH
     CH --> DBT
 
-    DBT -.-> FLINK
     DBT -.-> SEMANTIC
     DBT -.-> ML
 
@@ -79,17 +85,22 @@ The platform organizes data in three tiers:
 
 ### Silver Layer
 
-- **Parquet**: Written by PySpark batch jobs reading from bronze
+- **Parquet (batch)**: Written by PySpark batch jobs reading from bronze
   - **Deduplication** by `symbol + open_time` (klines) or `symbol + trade_id` (trades)
   - Type casting (strings → decimals, timestamps → longs)
   - Partitioned by `symbol/interval/year/month` for optimal query patterns
   - Overwrites partitions atomically
+- **Delta Lake (streaming)**: Written by PySpark Structured Streaming
+  - OHLCV: filter closed klines, cast to Silver types, append to Delta
+  - VWAP: event-time tumbling windows with watermarking (VWAP, OFI, volatility, trade count)
+  - Stateful deduplication within watermark
+  - Checkpoint-based exactly-once semantics
 - **ClickHouse**: Loaded by `olap/loader.py` from MinIO silver Parquet
   - `ReplacingMergeTree(_loaded_at)` engine for idempotent loads
   - Partitioned by `(symbol, toYYYYMM(open_time))`
   - Ordered by `(symbol, interval, open_time)`
 
-### Gold Layer (Phase 3 — In Progress)
+### Gold Layer (Phase 3)
 
 - dbt models consuming ClickHouse silver data
 - **Staging**: `stg_crypto__klines` — typed view with surrogate keys
@@ -117,6 +128,7 @@ The platform organizes data in three tiers:
 | Lake writer | `confluent-kafka` + `pyarrow` | `src/ingestion/writer/lake_writer.py` | Kafka → bronze Parquet |
 | REST backfiller | `httpx` + `pyarrow` | `src/batch/backfill/binance_rest.py` | Historical data → bronze |
 | Silver transformer | PySpark | `src/batch/silver/kline_transformer.py` | Bronze → silver dedup |
+| Stream processor | PySpark | `src/streaming/` | Real-time aggregates + microstructure metrics → silver Delta Lake |
 | OLAP loader | `clickhouse-connect` + `pyarrow` | `src/olap/loader.py` | MinIO silver → ClickHouse |
 | dbt models | `dbt-clickhouse` | `dbt/models/` | Silver → gold SQL transforms |
 | Config | Pydantic v2 | `src/ingestion/config.py`, `src/batch/config.py`, `src/olap/config.py` | Typed, validated settings |

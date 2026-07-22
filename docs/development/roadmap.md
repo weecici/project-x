@@ -9,7 +9,7 @@
 | 1 | Foundation + Ingestion | :material-check-circle:{ style="color: green" } | Live WS → Kafka → MinIO lake |
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } | REST backfill, PySpark silver |
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } | ClickHouse, dbt staging + gold marts |
-| 4 | Stream Processing | :material-clock-outline: | Flink windowed aggregations |
+| 4 | Stream Processing | :material-check-circle:{ style="color: green" } | PySpark Structured Streaming |
 | 5 | Semantic Layer + BI | :material-clock-outline: | Metrics store, dashboard integration |
 | 6 | Orchestration + Governance | :material-clock-outline: | Airflow DAGs, data quality |
 | 7 | Observability | :material-clock-outline: | Prometheus, Grafana, alerting |
@@ -59,12 +59,13 @@
 
 ### Phase 4 — Stream Processing
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-check-circle: Complete
 
-- [ ] Apache Flink (PyFlink)
-- [ ] Windowed aggregations (tumbling, sliding)
-- [ ] Real-time technical indicators
-- [ ] Kafka → Flink → ClickHouse pipeline
+- [x] PySpark Structured Streaming
+- [x] OHLCV filter-and-cast pipeline (closed kline bars → Delta + Kafka)
+- [x] VWAP tumbling-window aggregation with event-time watermarking (VWAP, OFI, volatility, trade count)
+- [x] Stateful deduplication via `dropDuplicatesWithinWatermark`
+- [x] Dual-sink output (Kafka topics + Delta Lake on MinIO)
 
 ### Phase 5 — Semantic Layer + BI
 

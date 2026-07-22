@@ -183,6 +183,37 @@ The dbt run will:
 3. Create `gold.fct_hourly_klines` table (hourly OHLCV)
 4. Create `gold.fct_kline_returns` table (log returns)
 
+## Streaming (Phase 4)
+
+Start the streaming jobs **after** the live producer is running:
+
+```bash
+# Terminal 3: OHLCV streaming
+uv run stream-ohlcv
+
+# Terminal 4: VWAP streaming
+uv run stream-vwap
+```
+
+Or via just shortcuts:
+
+```bash
+just stream-ohlcv
+just stream-vwap
+```
+
+The streaming jobs:
+
+1. **OHLCV**: Reads `raw.klines` from Kafka, filters closed bars, casts to Silver types, and dual-sinks to Delta Lake + `agg.klines` Kafka topic
+2. **VWAP**: Reads `raw.trades` from Kafka, applies event-time watermarking, deduplicates, and computes VWAP, OFI, volatility, and trade count via tumbling windows — dual-sinks to Delta Lake + `agg.vwap` Kafka topic
+
+**Key details:**
+
+- Streaming jobs run continuously — kill to stop
+- Checkpoint-based exactly-once semantics (S3 checkpoints)
+- Only the VWAP job uses event-time watermarking (10s default); OHLCV is a filter-and-cast pipeline
+- Delta Lake provides ACID transactions on MinIO
+
 ## Monitoring
 
 ### Kafka UI
@@ -254,6 +285,10 @@ uv run load-olap
 uv run dbt deps
 uv run dbt run
 uv run dbt test
+
+# 7. Start streaming (Terminal 3 + 4)
+uv run stream-ohlcv &
+uv run stream-vwap &
 ```
 
 ### Re-run Silver Transformation

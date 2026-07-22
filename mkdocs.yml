@@ -86,6 +86,7 @@ nav:
     - API — Ingestion: reference/api-ingestion.md
     - API — Batch: reference/api-batch.md
     - API — OLAP: reference/api-olap.md
+    - API — Streaming: reference/api-streaming.md
     - Environment Variables: reference/env-vars.md
   - Development:
     - Contributing: development/contributing.md

@@ -62,8 +62,12 @@ flowchart TB
         SPARK["PySpark silver\n(dedup, cast, partition)"]
     end
 
+    subgraph STREAM["Stream Processing"]
+        SPARK_STREAM["PySpark Structured Streaming\n(OHLCV, VWAP, OFI, volatility)"]
+    end
+
     subgraph LAKE["Lake Storage (Medallion)"]
-        S3["MinIO S3\nBronze → Silver\n(Parquet)"]
+        S3["MinIO S3\nBronze → Silver\n(Parquet + Delta)"]
     end
 
     subgraph OLAP["OLAP + Analytics"]
@@ -73,19 +77,19 @@ flowchart TB
     end
 
     subgraph FUTURE["Future Phases"]
-        FLINK["Flink\n(stream processing)"]
         ML["ML Pipeline\n(PyTorch + MLflow)"]
     end
 
     WS --> PROD --> KAFKA
     KAFKA --> S3
+    KAFKA --> SPARK_STREAM
     REST --> BACKFILL --> S3
     S3 --> SPARK --> S3
+    SPARK_STREAM --> S3
 
     S3 --> LOADER --> CH
     CH --> DBT
 
-    DBT -.-> FLINK
     DBT -.-> ML
 
     style FUTURE fill:#f0f0f0,stroke:#999,stroke-dasharray: 5 5
@@ -98,7 +102,7 @@ flowchart TB
 | 1 | Foundation + Ingestion | :material-check-circle:{ style="color: green" } Complete |
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } Complete |
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } Complete |
-| 4 | Stream Processing | :material-circle-outline: Planned |
+| 4 | Stream Processing | :material-check-circle:{ style="color: green" } Complete |
 | 5 | Semantic Layer + BI | :material-circle-outline: Planned |
 | 6 | Orchestration + Governance | :material-circle-outline: Planned |
 | 7 | Observability | :material-circle-outline: Planned |
