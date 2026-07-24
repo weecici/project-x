@@ -110,16 +110,24 @@ def load_klines(config: OlapLoaderConfig) -> int:
 
     dataset_path = f"{config.minio_bucket_silver}/{config.silver_klines_prefix}"
 
-    # Define dataset with Hive partitioning
-    dataset = ds.dataset(  # type: ignore[no-untyped-call]
-        dataset_path,
-        filesystem=s3_fs,
-        format="parquet",
-        partitioning="hive",
-    )
+    try:
+        # Define dataset with Hive partitioning
+        dataset = ds.dataset(  # type: ignore[no-untyped-call]
+            dataset_path,
+            filesystem=s3_fs,
+            format="parquet",
+            partitioning="hive",
+        )
 
-    # Load table with correct columns projection and schema casting
-    table = dataset.to_table(columns=_INSERT_COLUMNS).cast(_SILVER_SCHEMA)
+        # Load table with correct columns projection and schema casting
+        table = dataset.to_table(columns=_INSERT_COLUMNS).cast(_SILVER_SCHEMA)
+    except (FileNotFoundError, OSError):
+        logger.warning(
+            "No Parquet files found under s3://{bucket}/{prefix}",
+            bucket=config.minio_bucket_silver,
+            prefix=config.silver_klines_prefix,
+        )
+        return 0
 
     total_rows = int(table.num_rows)
     if total_rows == 0:
@@ -131,21 +139,19 @@ def load_klines(config: OlapLoaderConfig) -> int:
         return 0
 
     logger.info(
-        "Inserting Arrow table | rows={n} table={db}.{table}",
+        "Inserting Arrow table | rows={n} table=silver.{table}",
         n=total_rows,
-        db=config.clickhouse_db,
         table=config.clickhouse_table_klines,
     )
 
     client.insert_arrow(
-        f"{config.clickhouse_db}.{config.clickhouse_table_klines}",
+        f"silver.{config.clickhouse_table_klines}",
         table,
     )
 
     logger.info(
-        "OLAP load complete | total_rows={n} table={db}.{table}",
+        "OLAP load complete | total_rows={n} table=silver.{table}",
         n=total_rows,
-        db=config.clickhouse_db,
         table=config.clickhouse_table_klines,
     )
     return total_rows

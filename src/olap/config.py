@@ -29,7 +29,7 @@ class OlapLoaderConfig(BaseSettings):
     # ClickHouse connection parameters
     clickhouse_host: str = Field(default="localhost")
     clickhouse_port: int = Field(default=8123, description="HTTP interface port.")
-    clickhouse_db: str = Field(default="crypto")
+    clickhouse_db: str = Field(default="silver")
     clickhouse_user: str = Field(default="default")
     clickhouse_password: str = Field(default="")
     clickhouse_table_klines: str = Field(

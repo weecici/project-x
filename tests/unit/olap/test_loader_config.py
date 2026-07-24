@@ -16,7 +16,7 @@ class TestOlapLoaderConfigDefaults:
 
         assert config.clickhouse_host == "localhost"
         assert config.clickhouse_port == 8123
-        assert config.clickhouse_db == "crypto"
+        assert config.clickhouse_db == "silver"
         assert config.clickhouse_user == "default"
         assert config.clickhouse_password == ""
 
