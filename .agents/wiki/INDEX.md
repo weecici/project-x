@@ -31,3 +31,4 @@ Content catalog of all wiki pages. Read this first to find relevant docs, then d
 | [decisions/adr-009-clickhouse-olap.md](decisions/adr-009-clickhouse-olap.md) | ClickHouse over DuckDB for OLAP — server-mode, Cube.js-compatible, ReplacingMergeTree for idempotent loads |
 | [decisions/adr-010-pyspark-structured-streaming.md](decisions/adr-010-pyspark-structured-streaming.md) | PySpark Structured Streaming as Phase 4 Stream Processing Engine due to Python 3.13 compatibility constraints |
 | [decisions/adr-011-cube-semantic-layer.md](decisions/adr-011-cube-semantic-layer.md) | Cube.js as the Semantic Layer — role-split, embedded/in-process Cube Store, and ClickHouse index rules |
+| [decisions/adr-012-orchestration-governance.md](decisions/adr-012-orchestration-governance.md) | Apache Airflow & OpenMetadata for Orchestration and Governance — LocalExecutor, OpenLineage standard, and manifest compiler |

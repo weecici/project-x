@@ -35,6 +35,9 @@ docker compose ps                 # check service health
 # Lint + type check via Just or directly
 pre-commit run
 
+# Python deps (let uv handle the versioning)
+uv add <dependency-name>
+
 # Ingestion (Phase 1)
 uv run produce                              # Binance WebSocket → Kafka producer
 uv run write-lake                           # Kafka → bronze
@@ -53,6 +56,9 @@ uv run stream-vwap                          # Kafka → silver
 
 # Semantic & BI (Phase 5)
 uv run export-bi                            # Cube REST API → CSV / Google Sheets sync
+
+# Orchestration & Governance (Phase 6)
+uv run export-lineage                       # Export OpenMetadata lineage JSON manifest graph
 
 # Tests
 uv run pytest tests/unit/ -v               # fast, no Docker required

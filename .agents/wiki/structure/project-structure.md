@@ -80,8 +80,16 @@ crypto-platform/
 │   │       ├── bento_service/
 │   │       └── fastapi_gateway/
 │   │
-│   └── orchestration/                    # Phase 6 — Airflow DAGs
-│       └── airflow_dags/
+│   └── orchestration/                    # Phase 6 — Airflow Orchestration & OpenMetadata Governance
+│       ├── __init__.py
+│       ├── config.py                     # OrchestrationConfig & GovernanceConfig
+│       ├── dags/                         # Airflow DAGs (LocalExecutor)
+│       │   ├── crypto_batch_backfill_dag.py
+│       │   ├── crypto_olap_serving_dag.py
+│       │   └── crypto_ml_retrain_dag.py
+│       └── governance/                   # OpenLineage & OpenMetadata manifest compiler
+│           ├── lineage.py
+│           └── run_lineage.py            # CLI entrypoint: export-lineage
 │
 ├── dbt/                                  # Phase 3 — silver → gold SQL models
 │   ├── dbt_project.yml
