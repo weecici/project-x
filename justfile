@@ -48,3 +48,9 @@ dbt-test:
 
 docs:
     uv run mkdocs serve
+
+export-lineage:
+    uv run export-lineage
+
+airflow-pass:
+    docker compose logs airflow | grep "Password for user" | awk '{print $NF}'
