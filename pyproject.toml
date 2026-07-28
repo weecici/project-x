@@ -5,6 +5,9 @@ description = "End-to-end crypto analytics platform: live + batch ingestion, lak
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+  "apache-airflow>=3.3.0",
+  "apache-airflow-providers-fab>=2.4.2",
+  "apache-airflow-providers-openlineage>=2.19.0",
   "boto3>=1.43.40",
   "clickhouse-connect>=0.8.0",
   "confluent-kafka>=2.15.0",
@@ -12,6 +15,8 @@ dependencies = [
   "gspread>=6.2.1",
   "httpx>=0.28.0",
   "loguru>=0.7.3",
+  "mypy-boto3-s3>=1.43.31",
+  "openlineage-python>=1.51.0",
   "pandas>=3.0.3",
   "pyarrow>=24.0.0",
   "pydantic>=2",
@@ -31,7 +36,7 @@ load-olap    = "olap.loader:cli"
 stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap  = "streaming.run_vwap:cli"
 export-bi    = "olap.exporter:cli"
-
+export-lineage = "orchestration.governance.run_lineage:cli"
 
 
 [dependency-groups]
