@@ -11,6 +11,35 @@
 #   docker compose up -d
 #   docker compose stop kafka-ui   # free RAM when not needed
 
+x-airflow-env: &airflow-env
+  # 1. Airflow Core & Database Authentication
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+  AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /tmp/simple_auth_passwords.json
+
+  # 2. Data Governance & Lineage (OpenLineage)
+  AIRFLOW__OPENLINEAGE__DISABLED: "false"
+  AIRFLOW__OPENLINEAGE__URL: "http://openmetadata:8585/api/v1/openlineage"
+  AIRFLOW__OPENLINEAGE__NAMESPACE: "crypto-platform"
+
+  # 3. Container Inter-Service Endpoints
+  PYTHONPATH: /opt/airflow/app/src
+  CLICKHOUSE_HOST: clickhouse
+  CLICKHOUSE_PORT: "8123"
+  MINIO_ENDPOINT: http://minio:9000
+  CUBE_API_URL: http://cube:4000
+
+  # 4. Task Execution Runtime Paths
+  DBT_LOG_PATH: /tmp/dbt_logs
+  DBT_TARGET_PATH: /tmp/dbt_target
+  DBT_ALLOW_EXPERIMENTAL_ADAPTERS: "true"
+  EXPORT_OUTPUT_DIR: /tmp/exports
+  LINEAGE_OUTPUT_DIR: /tmp/exports
+
+  # 5. PySpark Execution Environment
+  JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+
 services:
 
   # --------------------------------------------------------------------------
@@ -199,10 +228,65 @@ services:
       - platform-net
     mem_limit: 768m
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4000/readyz"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/readyz').then(r => process.exit(r.ok ? 0 : 1))"]
       interval: 15s
       timeout: 5s
       retries: 6
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL — Airflow Metadata Database
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:alpine
+    container_name: platform-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - platform-net
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Apache Airflow — Workflow Orchestration Engine (LocalExecutor)
+  # --------------------------------------------------------------------------
+  airflow:
+    build:
+      context: .
+      dockerfile: infra/airflow/Dockerfile
+    image: crypto-platform-airflow:latest
+    container_name: platform-airflow
+    command: standalone
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8085:8080"   # Airflow Webserver (Host 8085)
+    environment: *airflow-env
+    volumes:
+      - .:/opt/airflow/app
+      - ./src/orchestration/dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt
+    networks:
+      - platform-net
+    mem_limit: 2048m
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
       start_period: 30s
 
 # ------------------------------------------------------------------------------
@@ -214,6 +298,8 @@ volumes:
   minio_data:
     driver: local
   clickhouse_data:
+    driver: local
+  postgres_data:
     driver: local
 
 # ------------------------------------------------------------------------------
