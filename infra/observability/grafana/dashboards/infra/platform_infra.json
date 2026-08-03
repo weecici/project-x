@@ -1,0 +1,73 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Kafka Consumer Group Lag",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "consumergroup_topic:kafka_consumergroup_lag:sum",
+          "legendFormat": "{{consumergroup}} - {{topic}}"
+        }
+      ]
+    },
+    {
+      "title": "ClickHouse Concurrent Query Threads",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "instance:clickhouse_queries_active:avg5m",
+          "legendFormat": "Query Threads (5m Avg)"
+        }
+      ]
+    },
+    {
+      "title": "Container Memory Usage Ratio",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "container:container_memory_usage:ratio",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
+      "title": "Container CPU Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "container:container_cpu_usage_seconds:rate5m",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["infra", "platform"],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Platform Infrastructure Health",
+  "uid": "platform-infra-health"
+}

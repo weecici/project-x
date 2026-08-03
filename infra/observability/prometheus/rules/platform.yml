@@ -1,0 +1,33 @@
+groups:
+  - name: kafka_alerts
+    rules:
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumergroup_lag_sum > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer group lag exceeds threshold"
+          description: "Consumer group {{ $labels.consumergroup }} on topic {{ $labels.topic }} lag is {{ $value }} messages."
+
+  - name: clickhouse_alerts
+    rules:
+      - alert: ClickHouseQueryThreadsHigh
+        expr: ClickHouseMetrics_QueryThread > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ClickHouse query thread count is high"
+          description: "ClickHouse query threads count reached {{ $value }}."
+
+  - name: platform_alerts
+    rules:
+      - alert: ContainerMemoryHigh
+        expr: (container_memory_usage_bytes{name=~"platform-.*"} / container_spec_memory_limit_bytes{name=~"platform-.*"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container memory usage is above 85%"
+          description: "Container {{ $labels.name }} memory usage is at {{ $value | humanizePercentage }}."

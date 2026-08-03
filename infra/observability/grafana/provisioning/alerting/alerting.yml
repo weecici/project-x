@@ -1,0 +1,20 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: "AlertManager Webhook"
+    receivers:
+      - uid: "alertmanager-webhook"
+        type: "webhook"
+        settings:
+          url: "http://alertmanager:9093/api/v1/alerts"
+          method: "POST"
+
+policies:
+  - orgId: 1
+    receiver: "AlertManager Webhook"
+    group_by: ["alertname", "container", "service"]
+    routes:
+      - receiver: "AlertManager Webhook"
+        object_matchers:
+          - ["severity", "=", "warning"]

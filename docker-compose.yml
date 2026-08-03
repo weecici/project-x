@@ -40,6 +40,12 @@ x-airflow-env: &airflow-env
   # 5. PySpark Execution Environment
   JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
+  # 6. Airflow Metrics & Observability (StatsD)
+  AIRFLOW__METRICS__STATSD_ON: "true"
+  AIRFLOW__METRICS__STATSD_HOST: statsd-exporter
+  AIRFLOW__METRICS__STATSD_PORT: "8125"
+  AIRFLOW__METRICS__STATSD_PREFIX: airflow
+
 services:
 
   # --------------------------------------------------------------------------
@@ -289,6 +295,159 @@ services:
       retries: 5
       start_period: 30s
 
+  # --------------------------------------------------------------------------
+  # Phase 7: Observability Stack (Activated via --profile observability)
+  # --------------------------------------------------------------------------
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: platform-prometheus
+    profiles: [observability]
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infra/observability/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - platform-net
+    mem_limit: 256m
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: platform-grafana
+    profiles: [observability]
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/observability/grafana/dashboards:/etc/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    networks:
+      - platform-net
+    mem_limit: 128m
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: platform-loki
+    profiles: [observability]
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/observability/loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - platform-net
+    mem_limit: 192m
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: platform-alloy
+    profiles: [observability]
+    ports:
+      - "12345:12345"
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - platform-net
+    mem_limit: 128m
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: platform-alertmanager
+    profiles: [observability]
+    ports:
+      - "9093:9093"
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./infra/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - platform-net
+    mem_limit: 64m
+    restart: unless-stopped
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: platform-kafka-exporter
+    profiles: [observability]
+    ports:
+      - "9308:9308"
+    command:
+      - --kafka.server=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - platform-net
+    mem_limit: 64m
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: platform-cadvisor
+    profiles: [observability]
+    ports:
+      - "8083:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - platform-net
+    mem_limit: 128m
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: platform-node-exporter
+    profiles: [observability]
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    networks:
+      - platform-net
+    mem_limit: 32m
+    restart: unless-stopped
+
+  statsd-exporter:
+    image: prom/statsd-exporter:latest
+    container_name: platform-statsd-exporter
+    profiles: [observability]
+    ports:
+      - "9102:9102"
+      - "8125:8125/udp"
+    networks:
+      - platform-net
+    mem_limit: 32m
+    restart: unless-stopped
+
 # ------------------------------------------------------------------------------
 # Named volumes — persist data across compose up/down cycles
 # ------------------------------------------------------------------------------
@@ -300,6 +459,12 @@ volumes:
   clickhouse_data:
     driver: local
   postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
     driver: local
 
 # ------------------------------------------------------------------------------

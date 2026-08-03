@@ -1,0 +1,53 @@
+// ---- Docker container discovery for log collection ----
+discovery.docker "platform" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "15s"
+}
+
+discovery.relabel "platform_logs" {
+  targets = discovery.docker.platform.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "platform" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.platform.targets
+  relabel_rules = discovery.relabel.platform_logs.rules
+  forward_to    = [loki.process.loguru_json.receiver]
+}
+
+loki.process "loguru_json" {
+  forward_to = [loki.write.local.receiver]
+
+  // Parse structured Loguru JSON logs
+  stage.json {
+    expressions = {
+      level  = "record.level.name",
+      module = "record.module",
+      func   = "record.function",
+    }
+  }
+
+  // Set extracted fields as Loki labels
+  stage.labels {
+    values = {
+      level  = "level",
+      module = "module",
+      func   = "func",
+    }
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

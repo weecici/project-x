@@ -1,0 +1,44 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "ML Serving Request Rate (rps)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=~\"ml-serving-.*\"}[1m])) by (backend)",
+          "legendFormat": "{{backend}}"
+        }
+      ]
+    },
+    {
+      "title": "ML Serving Latency p95 (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ds_prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"ml-serving-.*\"}[5m])) by (le, backend)) * 1000",
+          "legendFormat": "{{backend}} p95"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["ml", "serving", "triton", "bentoml", "fastapi"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "ML Model Serving Benchmarks (Triton / BentoML / FastAPI)",
+  "uid": "ml-serving-benchmarks"
+}

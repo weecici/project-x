@@ -1,0 +1,21 @@
+groups:
+  - name: kafka_recording_rules
+    rules:
+      - record: consumergroup_topic:kafka_consumergroup_lag:sum
+        expr: sum(kafka_consumergroup_lag) by (consumergroup, topic)
+
+      - record: topic_partition:kafka_topic_partition_current_offset:max
+        expr: max(kafka_topic_partition_current_offset) by (topic, partition)
+
+  - name: container_recording_rules
+    rules:
+      - record: container:container_memory_usage:ratio
+        expr: container_memory_usage_bytes{name=~"platform-.*"} / container_spec_memory_limit_bytes{name=~"platform-.*"}
+
+      - record: container:container_cpu_usage_seconds:rate5m
+        expr: rate(container_cpu_usage_seconds_total{name=~"platform-.*"}[5m])
+
+  - name: clickhouse_recording_rules
+    rules:
+      - record: instance:clickhouse_queries_active:avg5m
+        expr: avg_over_time(ClickHouseMetrics_QueryThread[5m])

@@ -10,4 +10,13 @@
 
     <!-- Listen on all interfaces to allow external hosts and container connections -->
     <listen_host>::</listen_host>
+
+    <!-- Native Prometheus metrics endpoint -->
+    <prometheus>
+        <port>9363</port>
+        <endpoint>/metrics</endpoint>
+        <metrics>true</metrics>
+        <events>true</events>
+        <asynchronous_metrics>true</asynchronous_metrics>
+    </prometheus>
 </clickhouse>
