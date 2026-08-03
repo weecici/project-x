@@ -113,15 +113,41 @@ crypto-platform/
 ├── infra/
 │   ├── clickhouse/
 │   │   ├── config.d/
-│   │   │   └── custom-config.xml         # timezone, listen interface, log overrides
+│   │   │   ├── custom-config.xml         # timezone, listen interface, log overrides, Prometheus endpoint (9363)
+│   │   │   └── custom-config.xml         # ClickHouse native Prometheus metrics config
 │   │   └── users.d/
 │   │       └── custom-users.xml          # default DB gold, 256MB query memory caps
 │   ├── swarm/                            # Phase 10 — Docker Swarm configs
 │   ├── k8s/                              # Phase 10 — Kubernetes manifests
-│   ├── observability/                    # Phase 7 — Prometheus + Grafana
-│   │   ├── prometheus/
-│   │   └── grafana/dashboards/
-│   └── metadata/                         # Phase 6 — OpenMetadata lineage configs
+│   ├── airflow/
+│   │   └── Dockerfile                    # Airflow container (Java 17 + uv + editable install)
+│   └── observability/                    # Phase 7 — Full observability stack
+│       ├── alertmanager/
+│       │   └── alertmanager.yml          # Alert routing, dedup, group wait/interval
+│       ├── alloy/
+│       │   └── config.alloy              # Docker log collection → Loki (replaces EOL Promtail)
+│       ├── grafana/
+│       │   ├── dashboards/
+│       │   │   ├── infra/
+│       │   │   │   ├── host_resources.json    # Host CPU + RAM metrics
+│       │   │   │   └── platform_infra.json    # Kafka lag, ClickHouse queries, container metrics
+│       │   │   └── ml_serving/
+│       │   │       └── ml_serving_stub.json   # Pre-wired for Phase 9 (Triton/BentoML/FastAPI)
+│       │   └── provisioning/
+│       │       ├── alerting/
+│       │       │   └── alerting.yml           # AlertManager webhook contact point
+│       │       ├── dashboards/
+│       │       │   └── dashboards.yml         # allowUiUpdates: false (dashboards-as-code)
+│       │       └── datasources/
+│       │           └── datasources.yml        # Prometheus + Loki + AlertManager
+│       ├── loki/
+│       │   └── loki-config.yaml               # Filesystem TSDB, schema v13, 7-day retention
+│       └── prometheus/
+│           ├── prometheus.yml                 # 7 scrape jobs, 15s interval, AlertManager integration
+│           └── rules/
+│               ├── infra.yml                  # HostHighCpuLoad, HostDiskSpaceLow
+│               ├── platform.yml               # KafkaConsumerLagHigh, ClickHouseQueryThreadsHigh, ContainerMemoryHigh
+│               └── recording_rules.yml        # 5 pre-computed metrics for dashboard queries
 │
 ├── docs/                                 # MkDocs source (mkdocstrings auto-API)
 │   ├── index.md
@@ -145,12 +171,20 @@ crypto-platform/
 │   │       └── test_olap_config.py
 │   │   └── semantic/
 │   │       └── test_semantic_config.py
+│   │   ├── orchestration/
+│   │   │   ├── test_orchestration_config.py
+│   │   │   ├── test_dags_validation.py
+│   │   │   └── test_lineage.py
+│   │   └── observability/
+│   │       ├── test_prometheus_config.py
+│   │       ├── test_loki_config.py
+│   │       └── test_grafana_provisioning.py
 │   ├── integration/
 │   │   ├── test_kafka_roundtrip.py
 │   │   ├── test_minio_writer.py
 │   │   ├── test_silver_spark.py
-│   │   ├── test_olap_loader.py
-│   │   └── test_bi_export.py
+│   │   ├── test_serving_loader.py
+│   │   └── test_serving_exporter.py
 │   └── e2e/
 │       ├── test_phase1_pipeline.py
 │       └── test_phase2_backfill.py
@@ -175,7 +209,9 @@ crypto-platform/
         │   ├── adr-008-httpx-rest-client.md
         │   ├── adr-009-clickhouse-olap.md
         │   ├── adr-010-pyspark-structured-streaming.md
-        │   └── adr-011-cube-semantic-layer.md
+        │   ├── adr-011-cube-semantic-layer.md
+        │   ├── adr-012-orchestration-governance.md
+        │   └── adr-013-observability.md
         └── structure/
             ├── phase.md
             └── project-structure.md

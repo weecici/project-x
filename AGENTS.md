@@ -4,7 +4,7 @@
 
 Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model.
 
-**Current state**: Phase 5 complete. Phase 6 (Orchestration + Governance) in progress.
+**Current state**: Phase 7 complete. Phase 8 (ML Pipeline + Optimization) next.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -73,7 +73,7 @@ just mypy           # mypy
 
 ## Architecture
 
-Phase 1 to 5 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
+Phase 1 to 7 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
 src/ingestion/              → Binance WS → Kafka producer + Kafka → MinIO lake writer
@@ -83,15 +83,15 @@ src/olap/                   → ClickHouse database loader + Cube REST exporter
 dbt/                        → silver → gold SQL models (dbt + ClickHouse)
 src/streaming/              → PySpark Structured Streaming (OHLCV, VWAP, metrics) → silver (Delta Lake)
 cube/                       → Cube semantic layer models + configuration
+src/orchestration/          → Airflow DAGs (backfill, olap-serving, ml-retrain) + lineage manifest compiler
+infra/observability/        → Prometheus, Grafana, Loki, Alloy, AlertManager configs + dashboards
 tests/                      → unit / integration (testcontainers) / e2e
-.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-011)
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-013)
 ```
 
 **Planned** (future phases):
 ```
 src/ml/              → features, training, optimization, serving (Phases 8–9)
-src/orchestration/   → Airflow DAGs (Phase 6)
-infra/observability/ → Prometheus + Grafana configs (Phase 7)
 infra/               → Docker Swarm + K8s manifests (Phase 10)
 ```
 

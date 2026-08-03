@@ -8,7 +8,7 @@
 | **4** | **Stream Processing** | Kafka, PySpark Structured Streaming, MinIO | PySpark windowed aggregates (OHLCV, VWAP, Order Flow, Volatility) → silver; Delta Lake enabled |
 | **5** | **Semantic Layer + BI** | ClickHouse, Cube.js | Cube metrics API on ClickHouse; Tableau Public dashboard; Excel sanity export |
 | **6** | **Orchestration + Governance** | Airflow (LocalExecutor), OpenMetadata | Airflow DAGs for batch + dbt + retrain; full lineage graph in OpenMetadata |
-| **7** | **Observability** | Prometheus, Grafana | Infra health dashboard; pre-wired ML serving dashboard |
+| **7** | **Observability** | Prometheus, Grafana, Loki, Alloy, AlertManager, kafka-exporter, cAdvisor, node-exporter, statsd-exporter | 9 observability services; 3 dashboards (infra, host, ML stub); 5 alert rules; 5 recording rules; profile-based execution |
 | **8** | **ML Pipeline + Optimization** | MinIO, MLflow, PySpark, PyTorch (CUDA sm_86) | Feature eng (PySpark + Numba CUDA JIT); model training on GPU; MLflow registry; TorchScript + quantization + pruning benchmark table |
 | **9** | **ML Serving (3-way)** | Triton (GPU), BentoML, FastAPI, Locust | All 3 serving paths live; Locust load-test; latency/throughput in Grafana |
 | **10** | **CI/CD + Deploy + Polish** | GitHub Actions, Docker Swarm | GH Actions pipeline; Swarm MVP; K8s manifests; README; ADRs; Doris comparison note; demo GIF |
