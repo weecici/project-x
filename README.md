@@ -76,6 +76,9 @@ uv run dbt test       # Run dbt tests
 # 7. Start streaming (Terminal 3 + 4)
 uv run stream-ohlcv   # Kafka → OHLCV Delta + Kafka
 uv run stream-vwap    # Kafka → VWAP Delta + Kafka
+
+# 8. Export lineage manifest
+uv run export-lineage # Build OpenMetadata JSON lineage graph
 ```
 
 ## Tech Stack
@@ -87,7 +90,10 @@ uv run stream-vwap    # Kafka → VWAP Delta + Kafka
 | Batch | PySpark, httpx |
 | Storage | MinIO (S3-compatible), Parquet, Delta Lake |
 | OLAP | ClickHouse, clickhouse-connect |
+| Semantic | Cube.js, gspread, pandas |
 | Transforms | dbt, dbt-clickhouse |
+| Orchestration | Apache Airflow (LocalExecutor), PostgreSQL |
+| Governance | OpenLineage, OpenMetadata manifest |
 | Validation | Pydantic v2 |
 | Infrastructure | Docker Compose |
 | Testing | pytest, testcontainers |
@@ -104,15 +110,28 @@ src/
 ├── batch/           # REST backfill + PySpark silver transformer
 │   ├── backfill/    # Binance REST client
 │   └── silver/      # PySpark transformer
-├── olap/            # MinIO silver → ClickHouse loader
-└── streaming/       # PySpark Structured Streaming
-    └── jobs/        # OHLCV + VWAP streaming jobs
+├── olap/            # ClickHouse loader + BI exporter
+├── streaming/       # PySpark Structured Streaming
+│   └── jobs/        # OHLCV + VWAP streaming jobs
+└── orchestration/   # Airflow DAGs + lineage governance
+    ├── dags/        # DAG definitions (backfill, olap, ml-retrain)
+    └── governance/  # Lineage manifest compiler
+
+cube/
+├── model/
+│   ├── cubes/       # Cube.js cube definitions (daily, hourly, returns)
+│   └── views/       # Public views (ohlcv_daily, ohlcv_hourly, price_analytics)
 
 dbt/
 ├── models/
 │   ├── staging/     # Silver → staging views
 │   └── marts/       # Gold aggregated tables
 └── macros/          # Schema naming overrides
+
+infra/
+└── airflow/         # Airflow Dockerfile
+
+tableau/             # Tableau connection files
 
 tests/
 ├── unit/            # Fast, no Docker
@@ -153,6 +172,9 @@ just check           # Lint
 just format          # Format
 just mypy            # Type check
 just docs            # Serve docs
+just export-lineage  # Export lineage manifest
+just up              # Start infrastructure
+just down            # Stop infrastructure
 ```
 
 ## Current Status
@@ -164,7 +186,7 @@ just docs            # Serve docs
 | 3 | OLAP + dbt | Done |
 | 4 | Stream Processing | Done |
 | 5 | Semantic Layer + BI | Done |
-| 6 | Orchestration + Governance | Planned |
+| 6 | Orchestration + Governance | In Progress |
 | 7 | Observability | Planned |
 | 8 | ML Pipeline | Planned |
 | 9 | ML Serving | Planned |
