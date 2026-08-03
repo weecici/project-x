@@ -32,3 +32,4 @@ Content catalog of all wiki pages. Read this first to find relevant docs, then d
 | [decisions/adr-010-pyspark-structured-streaming.md](decisions/adr-010-pyspark-structured-streaming.md) | PySpark Structured Streaming as Phase 4 Stream Processing Engine due to Python 3.13 compatibility constraints |
 | [decisions/adr-011-cube-semantic-layer.md](decisions/adr-011-cube-semantic-layer.md) | Cube.js as the Semantic Layer — role-split, embedded/in-process Cube Store, and ClickHouse index rules |
 | [decisions/adr-012-orchestration-governance.md](decisions/adr-012-orchestration-governance.md) | Apache Airflow & OpenMetadata for Orchestration and Governance — LocalExecutor, OpenLineage standard, and manifest compiler |
+| [decisions/adr-013-observability.md](decisions/adr-013-observability.md) | Prometheus, Grafana, Loki, and Grafana Alloy for Observability — Grafana Alloy log collection, dashboard-as-code, and profile execution |

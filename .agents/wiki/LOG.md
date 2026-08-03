@@ -209,3 +209,35 @@ Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-D
 **Tests & Wiki**
 - Developed config unit tests and a ClickHouse container integration test for the CSV exporter verifying column formats, directory auto-creation, and row values.
 - Documented choices in `ADR-011` and indexed them within `INDEX.md`, `LOG.md`, and `project-structure.md`.
+
+## [2026-07-28] phase-6-implementation | Orchestration + Governance
+
+**Orchestration & Airflow Tasks**
+- Adopted **Apache Airflow 3.3.0** with PostgreSQL metadata database.
+- Implemented Dynamic Task Mapping (`.expand()`) over symbol lists for parallel Binance REST backfills fanning in to PySpark.
+- Resolved silent async operators execution by introducing synchronous wrappers.
+
+**Governance & Lineage Compiler**
+- Developed a dynamic metadata lineage compiler `src/orchestration/governance/lineage.py`.
+- Parses dbt compilation AST (`manifest.json`), Airflow `DagBag` tasks and asset outlets, Cube.js YAML files, and BI configs.
+- Generates standards-compliant OpenLineage v1.0 `RunEvent` and OpenMetadata `AddLineageRequest` JSON manifests.
+- Added permissions fallback block writing safely to `/tmp/exports` in container environments.
+
+**Wiki & Documentation**
+- Created `ADR-012` explaining Airflow 3 and metadata lineage structure choices.
+
+## [2026-08-02] phase-7-implementation | Observability
+
+**Infrastructure & Stack Configuration**
+- Integrated Prometheus, Grafana, Loki, Grafana Alloy, AlertManager, cAdvisor, node-exporter, kafka-exporter, and statsd-exporter.
+- Placed all observability containers under the `observability` Compose profile to manage memory limits within the 7-8 GB budget.
+- Enabled native ClickHouse metrics endpoint on port `9363` and Airflow StatsD metrics emission.
+
+**Dashboards & Alerting**
+- Configured dashboards-as-code provisioning (`allowUiUpdates: false`) in Grafana.
+- Created Platform Infra and Host Hardware dashboards, and a pre-wired ML Serving dashboard stub for Triton, BentoML, and FastAPI.
+- Configured AlertManager routing rules and symptom-based Prometheus alert definitions.
+
+**Wiki & Tests**
+- Created `ADR-013` documenting Alloy, JMX vs kafka-exporter, and memory management.
+- Implemented configuration validation unit tests for Prometheus, Loki, AlertManager, and Grafana provisioning.
