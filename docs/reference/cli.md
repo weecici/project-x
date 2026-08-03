@@ -290,6 +290,7 @@ The `justfile` provides shortcut recipes for all commands:
 | `just down` | `docker compose down` | Stop all infrastructure |
 | `just obs-up` | `docker compose --profile observability up -d` | Start observability stack |
 | `just obs-down` | `docker compose --profile observability down` | Stop observability stack |
+| `just obs-reload-prometheus` | `curl -X POST http://localhost:9090/-/reload` | Hot-reload Prometheus config |
 
 ---
 

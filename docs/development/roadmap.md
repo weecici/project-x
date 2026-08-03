@@ -11,8 +11,8 @@
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } | ClickHouse, dbt staging + gold marts |
 | 4 | Stream Processing | :material-check-circle:{ style="color: green" } | PySpark Structured Streaming |
 | 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } | Cube.js metrics API, BI exporter, Tableau |
-| 6 | Orchestration + Governance | :material-progress-clock: | Airflow DAGs, lineage compiler, OpenLineage |
-| 7 | Observability | :material-clock-outline: | Prometheus, Grafana, alerting |
+| 6 | Orchestration + Governance | :material-check-circle:{ style="color: green" } | Airflow DAGs, lineage compiler, OpenLineage |
+| 7 | Observability | :material-check-circle:{ style="color: green" } | Prometheus, Grafana, Loki, Alloy, alerting |
 | 8 | ML Pipeline + Optimization | :material-clock-outline: | Feature store, training, Optuna |
 | 9 | ML Serving (3-way) | :material-clock-outline: | BentoML + TorchScript + Triton |
 | 10 | CI/CD + Deploy + Polish | :material-clock-outline: | Docker Swarm, K8s, monitoring |
@@ -81,7 +81,7 @@
 
 ### Phase 6 — Orchestration + Governance
 
-**Status**: :material-progress-clock: In Progress
+**Status**: :material-check-circle: Complete
 
 - [x] Apache Airflow 3.3.0 (LocalExecutor) in Docker
 - [x] PostgreSQL metadata database (Alpine, 256MB limit)
@@ -98,12 +98,29 @@
 
 ### Phase 7 — Observability
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-check-circle: Complete
 
-- [ ] Prometheus metrics export
-- [ ] Grafana dashboards
-- [ ] Alerting rules (latency, errors, lag)
-- [ ] Distributed tracing
+- [x] Prometheus v3.4.2 (15s scrape interval, 7 scrape jobs)
+- [x] Grafana 12.0.0 (dashboard-as-code, `allowUiUpdates: false`)
+- [x] Grafana Alloy v1.9.1 (replaces EOL Promtail, Docker log collection)
+- [x] Loki 3.5.0 (filesystem TSDB, schema v13, 7-day retention)
+- [x] AlertManager v0.28.1 (symptom-based alerting rules)
+- [x] kafka-exporter (consumer lag + partition offset metrics)
+- [x] cAdvisor (per-container CPU/RAM/Net/IO metrics)
+- [x] node-exporter (host hardware metrics)
+- [x] statsd-exporter (Airflow StatsD → Prometheus bridge)
+- [x] ClickHouse native Prometheus endpoint (port 9363)
+- [x] Airflow StatsD emission enabled
+- [x] Platform Infrastructure Health dashboard (4 panels)
+- [x] Host Hardware & Node Metrics dashboard (2 panels)
+- [x] ML Model Serving Benchmarks stub dashboard (2 panels, Phase 9)
+- [x] Prometheus alert rules: KafkaConsumerLagHigh, ClickHouseQueryThreadsHigh, ContainerMemoryHigh, HostHighCpuLoad, HostDiskSpaceLow
+- [x] Prometheus recording rules (5 rules for dashboard queries)
+- [x] Grafana provisioning: datasources (Prometheus, Loki, AlertManager), dashboards, alerting contact points
+- [x] AlertManager routing + dedup config
+- [x] Docker Compose profile `observability` (~912 MB total)
+- [x] `just obs-up`, `just obs-down`, `just obs-reload-prometheus` recipes
+- [x] Unit tests (Prometheus, Loki, Grafana provisioning configs)
 
 ### Phase 8 — ML Pipeline + Optimization
 

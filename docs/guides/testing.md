@@ -23,6 +23,10 @@ tests/
 │   │   ├── test_orchestration_config.py # OrchestrationConfig + GovernanceConfig
 │   │   ├── test_dags_validation.py     # DAG structure validation (3 DAGs)
 │   │   └── test_lineage.py             # Lineage manifest builder
+│   ├── observability/
+│   │   ├── test_prometheus_config.py   # Prometheus scrape configs + rules
+│   │   ├── test_loki_config.py         # Loki + AlertManager config validity
+│   │   └── test_grafana_provisioning.py # Grafana datasources, dashboards, alerting
 │   └── utils/
 │       └── test_retry.py               # Retry decorator behavior
 ├── integration/

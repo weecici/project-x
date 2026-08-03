@@ -47,6 +47,15 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **Cube.js** | `cubejs/cube` | Semantic layer | Metrics API on ClickHouse gold tables, pre-aggregations |
 | **PostgreSQL** | `postgres:alpine` | Airflow metadata DB | Lightweight, 256MB cap, enables LocalExecutor |
 | **Apache Airflow** | `apache/airflow:latest` | Workflow orchestration | DAG-based scheduling, Dynamic Task Mapping, asset-driven triggers |
+| **Prometheus** | `prom/prometheus:latest` | Metrics collection + TSDB | 15s scrape interval, 7 scrape jobs, alert rules |
+| **Grafana** | `grafana/grafana:latest` | Dashboards + alerting | Dashboard-as-code (`allowUiUpdates: false`), provisioned datasources |
+| **Loki** | `grafana/loki:latest` | Log aggregation | Filesystem TSDB, schema v13, 7-day retention |
+| **Grafana Alloy** | `grafana/alloy:latest` | Log collector | Replaces EOL Promtail, reads Docker socket |
+| **AlertManager** | `prom/alertmanager:latest` | Alert routing | Symptom-based rules, 30s group wait, 5m group interval |
+| **kafka-exporter** | `danielqsj/kafka-exporter:latest` | Kafka metrics | Consumer lag + partition offset via Kafka Admin API |
+| **cAdvisor** | `gcr.io/cadvisor/cadvisor:latest` | Container metrics | Per-container CPU/RAM/Net/IO |
+| **node-exporter** | `prom/node-exporter:latest` | Host metrics | CPU, RAM, disk utilization |
+| **statsd-exporter** | `prom/statsd-exporter:latest` | StatsD bridge | Airflow StatsD → Prometheus metrics |
 
 ## Development Tools
 

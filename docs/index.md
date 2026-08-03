@@ -82,6 +82,13 @@ flowchart TB
         LINEAGE["Lineage compiler\n(OpenMetadata)"]
     end
 
+    subgraph OBS["Observability"]
+        PROM["Prometheus\n(metrics)"]
+        GRAF["Grafana\n(dashboards)"]
+        LOKI["Loki\n(logs)"]
+        ALERT["AlertManager\n(alerts)"]
+    end
+
     subgraph FUTURE["Future Phases"]
         ML["ML Pipeline\n(PyTorch + MLflow)"]
     end
@@ -102,8 +109,12 @@ flowchart TB
 
     DBT -.-> ML
 
+    PROM -.-> GRAF
+    LOKI -.-> GRAF
+
     style FUTURE fill:#f0f0f0,stroke:#999,stroke-dasharray: 5 5
     style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
+    style OBS fill:#e8f5e9,stroke:#2e7d32,stroke-dasharray: 5 5
 ```
 
 ## Current Status
@@ -115,8 +126,8 @@ flowchart TB
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } Complete |
 | 4 | Stream Processing | :material-check-circle:{ style="color: green" } Complete |
 | 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } Complete |
-| 6 | Orchestration + Governance | :material-progress-clock: In Progress |
-| 7 | Observability | :material-circle-outline: Planned |
+| 6 | Orchestration + Governance | :material-check-circle:{ style="color: green" } Complete |
+| 7 | Observability | :material-check-circle:{ style="color: green" } Complete |
 | 8 | ML Pipeline + Optimization | :material-circle-outline: Planned |
 | 9 | ML Serving (3-way) | :material-circle-outline: Planned |
 | 10 | CI/CD + Deploy + Polish | :material-circle-outline: Planned |

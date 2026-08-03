@@ -70,6 +70,9 @@ graph TB
         CH["ClickHouse\nReplacingMergeTree"]
         PG["PostgreSQL\nAirflow metadata"]
         AF["Airflow\nLocalExecutor"]
+        PROM["Prometheus\nmetrics"]
+        GRAF["Grafana\ndashboards"]
+        LOKI["Loki\nlogs"]
     end
 
     subgraph DBT["dbt Models"]

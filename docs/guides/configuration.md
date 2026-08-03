@@ -127,8 +127,18 @@ CLICKHOUSE_TABLE_KLINES=klines_raw
 | MinIO Console | 9001 | Web console |
 | ClickHouse HTTP | 8123 | HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | Native TCP (internal replication) |
+| ClickHouse Prometheus | 9363 | Native metrics endpoint |
 | Airflow | 8085 | Airflow webserver (LocalExecutor) |
 | PostgreSQL | 5432 | Airflow metadata database |
+| Prometheus | 9090 | Metrics collection + TSDB |
+| Grafana | 3000 | Dashboards + alerting UI |
+| Loki | 3100 | Log aggregation |
+| AlertManager | 9093 | Alert routing |
+| kafka-exporter | 9308 | Kafka consumer lag metrics |
+| cAdvisor | 8083 | Per-container metrics |
+| node-exporter | 9100 | Host hardware metrics |
+| statsd-exporter | 9102 | Airflow StatsD bridge |
+| Alloy | 12345 | Docker log collection |
 
 ## Streaming
 

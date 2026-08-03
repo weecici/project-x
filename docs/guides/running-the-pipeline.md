@@ -28,6 +28,14 @@ Expected services:
 | Airflow | 8085 | Workflow orchestration |
 | mc-init | — | Bucket creation (one-shot) |
 
+Start observability stack (optional):
+
+```bash
+just obs-up    # or: docker compose --profile observability up -d
+```
+
+This adds 9 services: Prometheus, Grafana, Loki, Alloy, AlertManager, kafka-exporter, cAdvisor, node-exporter, statsd-exporter.
+
 Stop services when done:
 
 ```bash
@@ -261,6 +269,41 @@ All components output structured logs with timestamps:
 ```
 
 Set `*_LOG_LEVEL=DEBUG` for verbose output.
+
+### Grafana Dashboards
+
+Start the observability stack first (`just obs-up`), then open [http://localhost:3000](http://localhost:3000) (login: `admin` / `admin`):
+
+- **Platform Infrastructure Health** — Kafka consumer lag, ClickHouse query threads, container memory/CPU
+- **Host Hardware & Node Metrics** — Host CPU utilization, RAM usage
+- **ML Model Serving Benchmarks** — Pre-wired for Phase 9 (request rate, p95 latency)
+
+Dashboards are provisioned as code (`infra/observability/grafana/dashboards/`). `allowUiUpdates: false` prevents drift.
+
+### Prometheus
+
+Open [http://localhost:9090](http://localhost:9090) to:
+
+- View all scrape targets and their health
+- Run PromQL queries against collected metrics
+- Inspect active alerting rules
+- Hot-reload config: `just obs-reload-prometheus`
+
+### Loki Logs
+
+Logs are collected by Alloy from all Docker containers and shipped to Loki. Query via Grafana's Explore tab with Loki datasource, or use the LogQL syntax.
+
+### AlertManager
+
+Open [http://localhost:9093](http://localhost:9093) to view active alerts and routing. Alert rules:
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| `KafkaConsumerLagHigh` | Consumer lag > 1000 for 5m | warning |
+| `ClickHouseQueryThreadsHigh` | Query threads > 20 for 5m | warning |
+| `ContainerMemoryHigh` | Container memory > 85% for 5m | warning |
+| `HostHighCpuLoad` | CPU > 90% for 5m | critical |
+| `HostDiskSpaceLow` | Disk < 15% free | warning |
 
 ## Common Operations
 

@@ -48,6 +48,14 @@ flowchart TB
         LINEAGE["Lineage Compiler\nOpenMetadata manifest"]
     end
 
+    subgraph OBS["Observability (Phase 7)"]
+        PROM["Prometheus\nmetrics + alerts"]
+        GRAF["Grafana\ndashboards"]
+        LOKI["Loki\nlog aggregation"]
+        ALERT["AlertManager\nalert routing"]
+        ALLOY["Alloy\nlog collector"]
+    end
+
     subgraph FUTURE["Future Phases"]
         ML["ML Pipeline\nFeature store + model serving"]
     end
@@ -76,8 +84,13 @@ flowchart TB
 
     DBT -.-> ML
 
+    PROM -.-> GRAF
+    LOKI -.-> GRAF
+    ALLOY -.-> LOKI
+
     style FUTURE fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5
     style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
+    style OBS fill:#e8f5e9,stroke:#2e7d32,stroke-dasharray: 5 5
 ```
 
 ## Medallion Architecture
@@ -150,6 +163,11 @@ The platform organizes data in three tiers:
 | Cube.js | Cube.js | `cube/` | Semantic layer (metrics + views) |
 | Airflow | Apache Airflow | `src/orchestration/dags/` | Workflow orchestration |
 | Lineage compiler | OpenLineage | `src/orchestration/governance/` | Data lineage manifest |
+| Prometheus | `prom/prometheus` | `infra/observability/prometheus/` | Metrics collection + alerting |
+| Grafana | `grafana/grafana` | `infra/observability/grafana/` | Dashboards (infra, host, ML stub) |
+| Loki | `grafana/loki` | `infra/observability/loki/` | Log aggregation (7-day retention) |
+| Alloy | `grafana/alloy` | `infra/observability/alloy/` | Docker log collector |
+| AlertManager | `prom/alertmanager` | `infra/observability/alertmanager/` | Alert routing |
 | Config | Pydantic v2 | `src/*/config.py` | Typed, validated settings |
 | Shared utils | Various | `src/utils/` | Logging, retry, S3 access |
 
@@ -163,5 +181,15 @@ The platform organizes data in three tiers:
 | MinIO Console | 9001 | Web UI for bucket browsing |
 | ClickHouse HTTP | 8123 | ClickHouse HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | ClickHouse native TCP (internal replication) |
+| ClickHouse Prometheus | 9363 | ClickHouse native metrics endpoint |
 | Airflow | 8085 | Airflow webserver (LocalExecutor) |
 | PostgreSQL | 5432 | Airflow metadata database |
+| Prometheus | 9090 | Metrics collection + TSDB |
+| Grafana | 3000 | Dashboards + alerting UI |
+| Loki | 3100 | Log aggregation (7-day retention) |
+| AlertManager | 9093 | Alert routing + deduplication |
+| kafka-exporter | 9308 | Kafka consumer lag metrics |
+| cAdvisor | 8083 | Per-container metrics |
+| node-exporter | 9100 | Host hardware metrics |
+| statsd-exporter | 9102 | Airflow StatsD → Prometheus bridge |
+| Alloy | 12345 | Docker log collection |
