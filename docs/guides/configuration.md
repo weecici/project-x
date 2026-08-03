@@ -127,6 +127,8 @@ CLICKHOUSE_TABLE_KLINES=klines_raw
 | MinIO Console | 9001 | Web console |
 | ClickHouse HTTP | 8123 | HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | Native TCP (internal replication) |
+| Airflow | 8085 | Airflow webserver (LocalExecutor) |
+| PostgreSQL | 5432 | Airflow metadata database |
 
 ## Streaming
 
@@ -158,3 +160,26 @@ The ClickHouse container is configured with conservative resource limits for loc
 | Max execution time | 60s | `custom-users.xml` |
 | Max threads | 2 | `custom-users.xml` |
 | Timezone | UTC | `custom-config.xml` |
+
+## Orchestration Configuration
+
+These control the Airflow orchestration and governance/lineage settings.
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `AIRFLOW_URL` | `str` | `http://localhost:8085` | Airflow webserver URL |
+| `AIRFLOW_USER` | `str` | `airflow` | Airflow username |
+| `AIRFLOW_PASSWORD` | `str` | `airflow` | Airflow password |
+| `AIRFLOW_DAGS_FOLDER` | `str` | `src/orchestration/dags` | DAG definitions directory |
+| `OPENLINEAGE_URL` | `str` | `http://localhost:8585/api/v1/openlineage` | OpenLineage API endpoint |
+| `OPENLINEAGE_NAMESPACE` | `str` | `crypto-platform` | OpenLineage namespace identifier |
+| `OPENMETADATA_URL` | `str` | `http://localhost:8585` | OpenMetadata API endpoint |
+| `LINEAGE_OUTPUT_DIR` | `str` | `.exports` | Output directory for lineage manifest JSON |
+
+**Example `.env`:**
+
+```bash
+AIRFLOW_URL=http://localhost:8085
+OPENLINEAGE_NAMESPACE=crypto-platform
+LINEAGE_OUTPUT_DIR=.exports
+```

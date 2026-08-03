@@ -101,6 +101,24 @@ dbt uses the same `CLICKHOUSE_*` environment variables as the OLAP loader, refer
 
 Additionally, `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true` must be set when running dbt commands (already configured in the justfile).
 
+## Orchestration (Airflow)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `AIRFLOW_URL` | `str` | `http://localhost:8085` | Airflow webserver URL |
+| `AIRFLOW_USER` | `str` | `airflow` | Airflow username |
+| `AIRFLOW_PASSWORD` | `str` | `airflow` | Airflow password |
+| `AIRFLOW_DAGS_FOLDER` | `str` | `src/orchestration/dags` | DAG definitions directory |
+
+## Governance (Lineage)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `OPENLINEAGE_URL` | `str` | `http://localhost:8585/api/v1/openlineage` | OpenLineage API endpoint |
+| `OPENLINEAGE_NAMESPACE` | `str` | `crypto-platform` | OpenLineage namespace identifier |
+| `OPENMETADATA_URL` | `str` | `http://localhost:8585` | OpenMetadata API endpoint |
+| `LINEAGE_OUTPUT_DIR` | `str` | `.exports` | Output directory for lineage manifest JSON |
+
 ## Docker Compose
 
 | Variable | Type | Default | Description |

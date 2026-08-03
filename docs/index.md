@@ -74,6 +74,12 @@ flowchart TB
         LOADER["OLAP loader\n(silver → ClickHouse)"]
         CH["ClickHouse\n(OLAP database)"]
         DBT["dbt models\n(staging → gold marts)"]
+        CUBE["Cube.js\n(semantic layer)"]
+    end
+
+    subgraph ORCH["Orchestration"]
+        AIRFLOW["Airflow\n(LocalExecutor)"]
+        LINEAGE["Lineage compiler\n(OpenMetadata)"]
     end
 
     subgraph FUTURE["Future Phases"]
@@ -89,10 +95,15 @@ flowchart TB
 
     S3 --> LOADER --> CH
     CH --> DBT
+    DBT --> CUBE
+
+    CUBE -.-> AIRFLOW
+    AIRFLOW --> LINEAGE
 
     DBT -.-> ML
 
     style FUTURE fill:#f0f0f0,stroke:#999,stroke-dasharray: 5 5
+    style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
 ```
 
 ## Current Status
@@ -103,8 +114,8 @@ flowchart TB
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } Complete |
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } Complete |
 | 4 | Stream Processing | :material-check-circle:{ style="color: green" } Complete |
-| 5 | Semantic Layer + BI | :material-circle-outline: Planned |
-| 6 | Orchestration + Governance | :material-circle-outline: Planned |
+| 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } Complete |
+| 6 | Orchestration + Governance | :material-progress-clock: In Progress |
 | 7 | Observability | :material-circle-outline: Planned |
 | 8 | ML Pipeline + Optimization | :material-circle-outline: Planned |
 | 9 | ML Serving (3-way) | :material-circle-outline: Planned |
@@ -122,4 +133,4 @@ uv sync
 
 ---
 
-**Python 3.13** · **uv** · **Docker** · **Apache Kafka** · **MinIO** · **PySpark** · **ClickHouse** · **dbt**
+**Python 3.13** · **uv** · **Docker** · **Apache Kafka** · **MinIO** · **PySpark** · **ClickHouse** · **dbt** · **Cube.js** · **Airflow**

@@ -10,8 +10,8 @@
 | 2 | Batch + Lake Maturation | :material-check-circle:{ style="color: green" } | REST backfill, PySpark silver |
 | 3 | OLAP + dbt | :material-check-circle:{ style="color: green" } | ClickHouse, dbt staging + gold marts |
 | 4 | Stream Processing | :material-check-circle:{ style="color: green" } | PySpark Structured Streaming |
-| 5 | Semantic Layer + BI | :material-clock-outline: | Metrics store, dashboard integration |
-| 6 | Orchestration + Governance | :material-clock-outline: | Airflow DAGs, data quality |
+| 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } | Cube.js metrics API, BI exporter, Tableau |
+| 6 | Orchestration + Governance | :material-progress-clock: | Airflow DAGs, lineage compiler, OpenLineage |
 | 7 | Observability | :material-clock-outline: | Prometheus, Grafana, alerting |
 | 8 | ML Pipeline + Optimization | :material-clock-outline: | Feature store, training, Optuna |
 | 9 | ML Serving (3-way) | :material-clock-outline: | BentoML + TorchScript + Triton |
@@ -69,21 +69,32 @@
 
 ### Phase 5 — Semantic Layer + BI
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-check-circle: Complete
 
-- [ ] Metrics store (dimension + metric definitions)
-- [ ] Superset / Metabase integration
-- [ ] Pre-built dashboards
-- [ ] REST API for metrics queries
+- [x] Cube.js semantic layer (3 cubes on ClickHouse gold tables)
+- [x] Cube public views (`ohlcv_daily`, `ohlcv_hourly`, `price_analytics`)
+- [x] Pre-aggregations for query performance
+- [x] BI exporter CLI (`export-bi`): Cube REST API → local CSV + Google Sheets
+- [x] `BiExporterConfig` + `GoogleServiceAccountConfig`
+- [x] Tableau connection (PostgreSQL wire protocol to Cube SQL API)
+- [x] Unit + integration tests for exporter
 
 ### Phase 6 — Orchestration + Governance
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-progress-clock: In Progress
 
-- [ ] Apache Airflow DAGs
-- [ ] Pipeline scheduling and dependency management
-- [ ] Data quality checks (Great Expectations)
-- [ ] Data catalog and lineage tracking
+- [x] Apache Airflow 3.3.0 (LocalExecutor) in Docker
+- [x] PostgreSQL metadata database (Alpine, 256MB limit)
+- [x] Airflow Dockerfile (Java 17 + uv + editable install)
+- [x] `crypto_batch_backfill` DAG — Dynamic Task Mapping, parallel per-symbol backfill
+- [x] `crypto_olap_serving` DAG — ClickHouse load → dbt → tests → BI export + lineage
+- [x] `crypto_ml_retrain` DAG — placeholder for Phase 8 ML retraining
+- [x] Lineage Manifest Compiler (5-source dynamic extraction)
+- [x] OpenLineage v1.0 + OpenMetadata compatible JSON manifest
+- [x] `export-lineage` CLI entry point
+- [x] `OrchestrationConfig` + `GovernanceConfig` (Pydantic Settings)
+- [x] Unit tests (DAG validation, config, lineage manifest)
+- [x] Integration test (end-to-end manifest export)
 
 ### Phase 7 — Observability
 

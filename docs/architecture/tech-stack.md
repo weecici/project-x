@@ -26,6 +26,9 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **clickhouse-connect** | 0.8+ | ClickHouse HTTP client | Zero-copy Arrow inserts, lightweight |
 | **dbt-clickhouse** | 1.10+ | dbt adapter for ClickHouse | SQL-based transformations on ClickHouse |
 | **minio** | 7.x | S3-compatible object storage client | Python SDK for MinIO |
+| **gspread** | 6.x | Google Sheets API client | BI exporter syncs CSV data to Google Sheets |
+| **pandas** | 3.x | DataFrame operations | BI exporter CSV processing |
+| **openlineage-python** | 1.51+ | OpenLineage event emission | Standard lineage event format for governance |
 | **loguru** | 0.7+ | Structured logging | Simplified logging with structured output |
 | **rich** | 15+ | Terminal formatting | Beautiful terminal output for CLI |
 | **tenacity** | 9.x | Retry library | Exponential backoff, configurable retries |
@@ -41,6 +44,9 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **MinIO** | `minio/minio` | S3-compatible object store | Local data lake storage, Hive-partitioned Parquet |
 | **ClickHouse** | `clickhouse/clickhouse-server:head-alpine` | OLAP database | Columnar analytics, ReplacingMergeTree dedup, fast inserts |
 | **mc-init** | `minio/mc` | Bucket initialization | Creates bronze/silver/gold buckets on startup |
+| **Cube.js** | `cubejs/cube` | Semantic layer | Metrics API on ClickHouse gold tables, pre-aggregations |
+| **PostgreSQL** | `postgres:alpine` | Airflow metadata DB | Lightweight, 256MB cap, enables LocalExecutor |
+| **Apache Airflow** | `apache/airflow:latest` | Workflow orchestration | DAG-based scheduling, Dynamic Task Mapping, asset-driven triggers |
 
 ## Development Tools
 

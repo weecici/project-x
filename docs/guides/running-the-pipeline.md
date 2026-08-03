@@ -24,6 +24,8 @@ Expected services:
 | Kafka UI | 8080 | Web UI |
 | MinIO | 9000, 9001 | S3 storage + console |
 | ClickHouse | 8123, 9009 | OLAP database |
+| PostgreSQL | 5432 | Airflow metadata DB |
+| Airflow | 8085 | Workflow orchestration |
 | mc-init | — | Bucket creation (one-shot) |
 
 Stop services when done:
@@ -289,6 +291,9 @@ uv run dbt test
 # 7. Start streaming (Terminal 3 + 4)
 uv run stream-ohlcv &
 uv run stream-vwap &
+
+# 8. Export lineage manifest
+uv run export-lineage
 ```
 
 ### Re-run Silver Transformation

@@ -154,6 +154,52 @@ uv run load-olap
 
 ---
 
+## `export-bi`
+
+Export Cube.js semantic layer data to CSV and sync to Google Sheets.
+
+```bash
+uv run export-bi
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | Cube.js REST API (port 4000) |
+| **Output** | Local CSV files + Google Sheets sync |
+| **Config** | `CUBE_API_URL`, `CUBE_API_SECRET`, `EXPORT_OUTPUT_DIR`, `GOOGLE_SERVICE_ACCOUNT_FILE`, `GOOGLE_SHEET_NAME` env vars |
+
+**What it does:**
+
+1. Connects to Cube.js REST API
+2. Fetches data for each configured view (`ohlcv_daily`, `ohlcv_hourly`, `price_analytics`)
+3. Saves local CSV files to the output directory
+4. Optionally syncs to Google Sheets via `gspread` (if service account configured)
+
+---
+
+## `export-lineage`
+
+Export OpenMetadata-compatible lineage manifest from the platform.
+
+```bash
+uv run export-lineage
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | Runtime configs, dbt manifest, Airflow DAGs, Cube YAML, BI exporter config |
+| **Output** | `lineage_manifest.json` in the exports directory |
+| **Config** | `LINEAGE_OUTPUT_DIR`, `OPENLINEAGE_NAMESPACE`, `OPENMETADATA_URL` env vars |
+
+**What it does:**
+
+1. Extracts lineage from 5 sources: runtime configs, dbt manifest, Airflow DAGs, Cube schemas, BI exporter config
+2. Deduplicates nodes and edges across all sources
+3. Generates OpenLineage v1.0 RunEvents and OpenMetadata AddLineageRequest payloads
+4. Writes the manifest as JSON to `LINEAGE_OUTPUT_DIR/lineage_manifest.json`
+
+---
+
 ## `stream-ohlcv`
 
 Start the OHLCV Structured Streaming job.
@@ -230,6 +276,8 @@ The `justfile` provides shortcut recipes for all commands:
 | `just load-olap` | `uv run load-olap` | Load silver → ClickHouse |
 | `just stream-ohlcv` | `uv run stream-ohlcv` | Start OHLCV streaming job |
 | `just stream-vwap` | `uv run stream-vwap` | Start VWAP streaming job |
+| `just export-bi` | `uv run export-bi` | Export Cube → CSV + Google Sheets |
+| `just export-lineage` | `uv run export-lineage` | Export lineage manifest |
 | `just dbt-deps` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt deps` | Install dbt packages |
 | `just dbt-run` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt run` | Run all dbt models |
 | `just dbt-test` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt test` | Run all dbt tests |
@@ -238,6 +286,10 @@ The `justfile` provides shortcut recipes for all commands:
 | `just format` | `uv run ruff format .` | Format code |
 | `just mypy` | `uv run mypy .` | Type check |
 | `just docs` | `uv run mkdocs serve` | Serve docs locally |
+| `just up` | `docker compose up -d` | Start all infrastructure |
+| `just down` | `docker compose down` | Stop all infrastructure |
+| `just obs-up` | `docker compose --profile observability up -d` | Start observability stack |
+| `just obs-down` | `docker compose --profile observability down` | Stop observability stack |
 
 ---
 
@@ -251,9 +303,11 @@ produce = "ingestion.run_producer:cli"
 write-lake = "ingestion.run_lake_writer:cli"
 backfill = "batch.run_backfill:cli"
 silver = "batch.run_silver:cli"
-load-olap = "olap.run_loader:cli"
+load-olap = "olap.loader:cli"
 stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap = "streaming.run_vwap:cli"
+export-bi = "olap.exporter:cli"
+export-lineage = "orchestration.governance.run_lineage:cli"
 ```
 
 Each `run_*.py` module contains a `cli()` function that:

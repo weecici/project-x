@@ -17,14 +17,21 @@ tests/
 │   ├── streaming/
 │   │   └── test_streaming_config.py    # StreamingConfig defaults + validation
 │   ├── olap/
-│   │   └── test_olap_config.py         # OlapConfig defaults + overrides
+│   │   ├── test_loader_config.py       # OlapLoaderConfig defaults + overrides
+│   │   └── test_exporter_config.py     # BiExporterConfig defaults + overrides
+│   ├── orchestration/
+│   │   ├── test_orchestration_config.py # OrchestrationConfig + GovernanceConfig
+│   │   ├── test_dags_validation.py     # DAG structure validation (3 DAGs)
+│   │   └── test_lineage.py             # Lineage manifest builder
 │   └── utils/
 │       └── test_retry.py               # Retry decorator behavior
 ├── integration/
 │   ├── test_stream_ohlcv.py            # OHLCV streaming (Kafka + MinIO testcontainers)
 │   ├── test_stream_vwap.py             # VWAP streaming (Kafka + MinIO testcontainers)
 │   ├── test_silver_spark.py            # PySpark silver transformation
-│   ├── test_olap_loader.py             # ClickHouse loader (ClickHouse + MinIO testcontainers)
+│   ├── test_serving_loader.py          # ClickHouse loader (ClickHouse + MinIO testcontainers)
+│   ├── test_serving_exporter.py        # Cube.js exporter integration
+│   ├── test_orchestration_lineage.py   # End-to-end lineage manifest export
 │   ├── test_minio_writer.py            # Kafka → MinIO lake writer
 │   └── test_kafka_roundtrip.py         # Kafka producer/consumer roundtrip
 └── e2e/

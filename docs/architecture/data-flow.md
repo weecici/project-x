@@ -230,6 +230,33 @@ ClickHouse silver/
        └→ gold.fct_daily_klines
        └→ gold.fct_hourly_klines
        └→ gold.fct_kline_returns
+
+ClickHouse gold/
+  └→ Cube.js (semantic views)
+       └→ ohlcv_daily
+       └→ ohlcv_hourly
+       └→ price_analytics
+
+Cube.js REST API
+  └→ export-bi (olap/exporter.py)
+       └→ .exports/*.csv
+       └→ Google Sheets
+
+Airflow DAGs
+  └→ crypto_batch_backfill (daily)
+       └→ backfill_symbol (mapped) >> transform_silver_batch
+  └→ crypto_olap_serving (asset-driven)
+       └→ load_clickhouse >> dbt_run >> dbt_test >> [export_bi, export_lineage]
+  └→ crypto_ml_retrain (asset-driven, placeholder)
+       └→ evaluate_feature_drift >> trigger_ml_retraining
+
+Lineage Compiler
+  └→ extract_runtime_config_nodes()       → Kafka, MinIO, ClickHouse nodes
+  └→ extract_dbt_manifest_lineage()       → dbt model dependency edges
+  └→ extract_airflow_dag_lineage()        → DAG → task → Asset edges
+  └→ extract_cube_semantic_lineage()      → Cube view → table edges
+  └→ extract_bi_exporter_lineage()        → View → CSV/Sheets export edges
+       └→ /tmp/exports/lineage_manifest.json (OpenMetadata compatible)
 ```
 
 ## File Naming

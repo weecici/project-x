@@ -38,8 +38,17 @@ flowchart TB
         DBT["dbt models\nstaging → gold marts"]
     end
 
+    subgraph SEMANTIC["Semantic Layer (Phase 5)"]
+        CUBE["Cube.js\nMetrics API + Views"]
+        BI["BI Exporter\nCSV + Google Sheets"]
+    end
+
+    subgraph ORCH["Orchestration (Phase 6)"]
+        AIRFLOW["Airflow\n(LocalExecutor)"]
+        LINEAGE["Lineage Compiler\nOpenMetadata manifest"]
+    end
+
     subgraph FUTURE["Future Phases"]
-        SEMANTIC["Semantic Layer\nMetrics + dimensions"]
         ML["ML Pipeline\nFeature store + model serving"]
     end
 
@@ -59,10 +68,16 @@ flowchart TB
     SILVER --> LOADER --> CH
     CH --> DBT
 
-    DBT -.-> SEMANTIC
+    DBT --> CUBE
+    CUBE --> BI
+
+    CUBE -.-> AIRFLOW
+    AIRFLOW --> LINEAGE
+
     DBT -.-> ML
 
     style FUTURE fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5
+    style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
 ```
 
 ## Medallion Architecture
@@ -128,10 +143,14 @@ The platform organizes data in three tiers:
 | Lake writer | `confluent-kafka` + `pyarrow` | `src/ingestion/writer/lake_writer.py` | Kafka → bronze Parquet |
 | REST backfiller | `httpx` + `pyarrow` | `src/batch/backfill/binance_rest.py` | Historical data → bronze |
 | Silver transformer | PySpark | `src/batch/silver/kline_transformer.py` | Bronze → silver dedup |
-| Stream processor | PySpark | `src/streaming/` | Real-time aggregates + microstructure metrics → silver Delta Lake |
+| Stream processor | PySpark | `src/streaming/` | Real-time aggregates → silver Delta Lake |
 | OLAP loader | `clickhouse-connect` + `pyarrow` | `src/olap/loader.py` | MinIO silver → ClickHouse |
+| BI exporter | Cube.js REST + `gspread` | `src/olap/exporter.py` | Cube → CSV + Google Sheets |
 | dbt models | `dbt-clickhouse` | `dbt/models/` | Silver → gold SQL transforms |
-| Config | Pydantic v2 | `src/ingestion/config.py`, `src/batch/config.py`, `src/olap/config.py` | Typed, validated settings |
+| Cube.js | Cube.js | `cube/` | Semantic layer (metrics + views) |
+| Airflow | Apache Airflow | `src/orchestration/dags/` | Workflow orchestration |
+| Lineage compiler | OpenLineage | `src/orchestration/governance/` | Data lineage manifest |
+| Config | Pydantic v2 | `src/*/config.py` | Typed, validated settings |
 | Shared utils | Various | `src/utils/` | Logging, retry, S3 access |
 
 ## Infrastructure
@@ -144,3 +163,5 @@ The platform organizes data in three tiers:
 | MinIO Console | 9001 | Web UI for bucket browsing |
 | ClickHouse HTTP | 8123 | ClickHouse HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | ClickHouse native TCP (internal replication) |
+| Airflow | 8085 | Airflow webserver (LocalExecutor) |
+| PostgreSQL | 5432 | Airflow metadata database |
