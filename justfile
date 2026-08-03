@@ -52,5 +52,11 @@ docs:
 export-lineage:
     uv run export-lineage
 
-airflow-pass:
-    docker compose logs airflow | grep "Password for user" | awk '{print $NF}'
+obs-up:
+    docker compose --profile observability up -d
+
+obs-down:
+    docker compose --profile observability down
+
+obs-reload-prometheus:
+    curl -X POST http://localhost:9090/-/reload
