@@ -93,7 +93,7 @@ uv run export-lineage # Build OpenMetadata JSON lineage graph
 | Semantic | Cube.js, gspread, pandas |
 | Transforms | dbt, dbt-clickhouse |
 | Orchestration | Apache Airflow (LocalExecutor), PostgreSQL |
-| Governance | OpenLineage, OpenMetadata manifest |
+| Observability | Prometheus, Grafana, Loki, Alloy, AlertManager |
 | Validation | Pydantic v2 |
 | Infrastructure | Docker Compose |
 | Testing | pytest, testcontainers |
@@ -129,7 +129,16 @@ dbt/
 └── macros/          # Schema naming overrides
 
 infra/
-└── airflow/         # Airflow Dockerfile
+├── airflow/         # Airflow Dockerfile
+└── observability/   # Prometheus, Grafana, Loki, Alloy, AlertManager configs
+    ├── alertmanager/
+    ├── alloy/
+    ├── grafana/
+    │   ├── dashboards/   # Platform infra, host resources, ML serving stub
+    │   └── provisioning/ # Datasources, dashboards, alerting
+    ├── loki/
+    └── prometheus/
+        └── rules/        # Alert + recording rules
 
 tableau/             # Tableau connection files
 
@@ -175,6 +184,8 @@ just docs            # Serve docs
 just export-lineage  # Export lineage manifest
 just up              # Start infrastructure
 just down            # Stop infrastructure
+just obs-up          # Start observability stack
+just obs-down        # Stop observability stack
 ```
 
 ## Current Status
@@ -186,8 +197,8 @@ just down            # Stop infrastructure
 | 3 | OLAP + dbt | Done |
 | 4 | Stream Processing | Done |
 | 5 | Semantic Layer + BI | Done |
-| 6 | Orchestration + Governance | In Progress |
-| 7 | Observability | Planned |
+| 6 | Orchestration + Governance | Done |
+| 7 | Observability | Done |
 | 8 | ML Pipeline | Planned |
 | 9 | ML Serving | Planned |
 | 10 | CI/CD + Deploy | Planned |
