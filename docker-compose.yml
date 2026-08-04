@@ -52,7 +52,7 @@ services:
   # Apache Kafka — KRaft mode, single combined broker/controller node
   # --------------------------------------------------------------------------
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.3.1
     container_name: platform-kafka
     hostname: kafka
     ports:
@@ -109,7 +109,7 @@ services:
   # Kafka UI — lightweight broker observability
   # --------------------------------------------------------------------------
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: platform-kafka-ui
     ports:
       - "8080:8080"
@@ -127,7 +127,7 @@ services:
   # MinIO — S3-compatible local lake storage
   # --------------------------------------------------------------------------
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: platform-minio
     command: server /data --console-address ":9001"
     ports:
@@ -156,7 +156,7 @@ services:
   # mc-init — one-shot MinIO Client that creates the medallion buckets
   # --------------------------------------------------------------------------
   mc-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: platform-mc-init
     depends_on:
       minio:
@@ -177,7 +177,7 @@ services:
   # ClickHouse — columnar OLAP engine
   # --------------------------------------------------------------------------
   clickhouse:
-    image: clickhouse/clickhouse-server:head-alpine
+    image: clickhouse/clickhouse-server:26.7-alpine
     container_name: platform-clickhouse
     ports:
       - "8123:8123"   # HTTP interface (clickhouse-connect, dbt)
@@ -209,7 +209,7 @@ services:
   # Cube — Semantic Layer
   # --------------------------------------------------------------------------
   cube:
-    image: cubejs/cube:latest
+    image: cubejs/cube:v1.7
     container_name: platform-cube
     restart: unless-stopped
     depends_on:
@@ -244,7 +244,7 @@ services:
   # PostgreSQL — Airflow Metadata Database
   # --------------------------------------------------------------------------
   postgres:
-    image: postgres:alpine
+    image: postgres:18.4-alpine
     container_name: platform-postgres
     ports:
       - "5432:5432"
@@ -300,7 +300,7 @@ services:
   # --------------------------------------------------------------------------
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.13.2
     container_name: platform-prometheus
     profiles: [observability]
     ports:
@@ -318,7 +318,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4
     container_name: platform-grafana
     profiles: [observability]
     ports:
@@ -337,7 +337,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.7
     container_name: platform-loki
     profiles: [observability]
     ports:
@@ -352,7 +352,7 @@ services:
     restart: unless-stopped
 
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.18.0
     container_name: platform-alloy
     profiles: [observability]
     ports:
@@ -370,7 +370,7 @@ services:
     restart: unless-stopped
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.33.1
     container_name: platform-alertmanager
     profiles: [observability]
     ports:
@@ -384,7 +384,7 @@ services:
     restart: unless-stopped
 
   kafka-exporter:
-    image: danielqsj/kafka-exporter:latest
+    image: danielqsj/kafka-exporter:v1.9.0
     container_name: platform-kafka-exporter
     profiles: [observability]
     ports:
@@ -400,7 +400,7 @@ services:
     restart: unless-stopped
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: ghcr.io/google/cadvisor:0.60
     container_name: platform-cadvisor
     profiles: [observability]
     ports:
@@ -419,7 +419,7 @@ services:
     restart: unless-stopped
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.12.1
     container_name: platform-node-exporter
     profiles: [observability]
     ports:
@@ -437,7 +437,7 @@ services:
     restart: unless-stopped
 
   statsd-exporter:
-    image: prom/statsd-exporter:latest
+    image: prom/statsd-exporter:v0
     container_name: platform-statsd-exporter
     profiles: [observability]
     ports:

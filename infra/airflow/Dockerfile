@@ -1,5 +1,5 @@
 # Standard Airflow Dockerfile utilizing uv for fast, reproducible dependency syncing
-FROM apache/airflow:latest
+FROM apache/airflow:3.3.0-python3.13
 
 USER root
 
