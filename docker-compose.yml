@@ -1,15 +1,4 @@
-# Crypto platform — Phase 1–3 Docker Compose stack.
-#
-# Services:
-#   kafka         - Apache Kafka (KRaft mode, no ZooKeeper)  apache/kafka:latest
-#   kafka-ui      - Provectus Kafka UI  http://localhost:8080
-#   minio         - MinIO S3-compatible object storage  http://localhost:9001
-#   mc-init       - One-shot init: creates bronze / silver / gold buckets
-#   clickhouse    - ClickHouse OLAP engine  http://localhost:8123
-#
-# Usage:
-#   docker compose up -d
-#   docker compose stop kafka-ui   # free RAM when not needed
+# Crypto platform
 
 x-airflow-env: &airflow-env
   # 1. Airflow Core & Database Authentication
@@ -167,7 +156,8 @@ services:
         mc mb --ignore-existing local/bronze &&
         mc mb --ignore-existing local/silver &&
         mc mb --ignore-existing local/gold &&
-        echo 'Buckets ready: bronze, silver, gold' &&
+        mc mb --ignore-existing local/mlflow &&
+        echo 'Buckets ready: bronze, silver, gold, mlflow' &&
         exit 0
       "
     networks:
@@ -241,7 +231,7 @@ services:
       start_period: 30s
 
   # --------------------------------------------------------------------------
-  # PostgreSQL — Airflow Metadata Database
+  # PostgreSQL
   # --------------------------------------------------------------------------
   postgres:
     image: postgres:18.4-alpine
@@ -254,6 +244,7 @@ services:
       POSTGRES_DB: airflow
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./infra/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     networks:
       - platform-net
     mem_limit: 256m
@@ -302,7 +293,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.13.2
     container_name: platform-prometheus
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "9090:9090"
     command:
@@ -320,7 +311,7 @@ services:
   grafana:
     image: grafana/grafana:12.4
     container_name: platform-grafana
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "3000:3000"
     environment:
@@ -339,7 +330,7 @@ services:
   loki:
     image: grafana/loki:3.7
     container_name: platform-loki
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -354,7 +345,7 @@ services:
   alloy:
     image: grafana/alloy:v1.18.0
     container_name: platform-alloy
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "12345:12345"
     command:
@@ -372,7 +363,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.33.1
     container_name: platform-alertmanager
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "9093:9093"
     command: --config.file=/etc/alertmanager/alertmanager.yml
@@ -386,7 +377,7 @@ services:
   kafka-exporter:
     image: danielqsj/kafka-exporter:v1.9.0
     container_name: platform-kafka-exporter
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "9308:9308"
     command:
@@ -402,7 +393,7 @@ services:
   cadvisor:
     image: ghcr.io/google/cadvisor:0.60
     container_name: platform-cadvisor
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "8083:8080"
     volumes:
@@ -421,7 +412,7 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.12.1
     container_name: platform-node-exporter
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "9100:9100"
     volumes:
@@ -439,13 +430,43 @@ services:
   statsd-exporter:
     image: prom/statsd-exporter:v0
     container_name: platform-statsd-exporter
-    profiles: [observability]
+    profiles: [obs]
     ports:
       - "9102:9102"
       - "8125:8125/udp"
     networks:
       - platform-net
-    mem_limit: 32m
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: infra/mlflow/Dockerfile
+    container_name: platform-mlflow
+    profiles: [ml]
+    ports:
+      - "5000:5000"
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      MLFLOW_SERVER_ALLOWED_HOSTS: "*"
+    command: >
+      mlflow server
+      --backend-store-uri postgresql+psycopg2://airflow:airflow@postgres:5432/mlflow_db
+      --default-artifact-root s3://mlflow/
+      --host 0.0.0.0
+      --port 5000
+      --workers 1
+      --uvicorn-opts "--timeout-keep-alive=120"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - platform-net
+    mem_limit: 1024m
     restart: unless-stopped
 
 # ------------------------------------------------------------------------------
