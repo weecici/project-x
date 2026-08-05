@@ -15,7 +15,8 @@ repos:
 
       - id: mypy
         name: mypy (type check)
-        entry: uv run mypy .
+        entry: uv run mypy
+        args: ["."]
         language: system
         types: [python]
         pass_filenames: false
