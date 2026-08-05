@@ -63,7 +63,7 @@ class TestMinIOParquetWriter:
         ]
         table = pa.Table.from_pylist(records)
         buf = io.BytesIO()
-        pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
+        pq.write_table(table, buf, compression="snappy")
         buf.seek(0)
         key = "trades/symbol=BTCUSDT/year=2026/month=07/day=05/test-file.parquet"
 
@@ -77,7 +77,7 @@ class TestMinIOParquetWriter:
 
         response = s3_client.get_object(Bucket=bronze_bucket, Key=key)
         raw = response["Body"].read()
-        result = pq.read_table(io.BytesIO(raw))  # type: ignore[no-untyped-call]
+        result = pq.read_table(io.BytesIO(raw))
 
         # Assert
         assert result.num_rows == 2
@@ -93,7 +93,7 @@ class TestMinIOParquetWriter:
         prefix = "trades/symbol=ETHUSDT/"
         key = f"{prefix}year=2026/month=07/day=05/eth-test.parquet"
         buf = io.BytesIO()
-        pq.write_table(pa.table({"symbol": ["ETHUSDT"]}), buf, compression="snappy")  # type: ignore[no-untyped-call]
+        pq.write_table(pa.table({"symbol": ["ETHUSDT"]}), buf, compression="snappy")
         buf.seek(0)
         s3_client.put_object(Bucket=bronze_bucket, Key=key, Body=buf.getvalue())
 
@@ -119,13 +119,13 @@ class TestMinIOParquetWriter:
             compressed_buf,
             compression="snappy",
             use_dictionary=False,
-        )  # type: ignore[no-untyped-call]
+        )
         pq.write_table(
             table,
             uncompressed_buf,
             compression="none",
             use_dictionary=False,
-        )  # type: ignore[no-untyped-call]
+        )
 
         # Act / Assert
         assert len(compressed_buf.getvalue()) < len(uncompressed_buf.getvalue()), (

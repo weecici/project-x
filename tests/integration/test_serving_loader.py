@@ -105,7 +105,7 @@ def _upload_fixture_parquet(loader_config: OlapLoaderConfig) -> None:
 
     table = pa.Table.from_pylist(_FIXTURE_ROWS)
     buf = io.BytesIO()
-    pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
+    pq.write_table(table, buf, compression="snappy")
     buf.seek(0)
     s3.put_object(
         Bucket=loader_config.minio_bucket_silver,

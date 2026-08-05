@@ -132,7 +132,7 @@ def _rows_to_parquet(rows: list[KlineRow]) -> bytes:
     ]
     table = pa.Table.from_pylist(records, schema=_KLINE_SCHEMA)
     buf = io.BytesIO()
-    pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
+    pq.write_table(table, buf, compression="snappy")
     buf.seek(0)
     return buf.getvalue()
 

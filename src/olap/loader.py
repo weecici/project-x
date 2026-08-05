@@ -12,7 +12,7 @@ import clickhouse_connect
 import pyarrow as pa
 import pyarrow.dataset as ds
 from loguru import logger
-from pyarrow.fs import S3FileSystem  # type: ignore[attr-defined]
+from pyarrow.fs import S3FileSystem
 
 from olap.config import OlapLoaderConfig
 from utils.logging import configure_logging
@@ -112,7 +112,7 @@ def load_klines(config: OlapLoaderConfig) -> int:
 
     try:
         # Define dataset with Hive partitioning
-        dataset = ds.dataset(  # type: ignore[no-untyped-call]
+        dataset = ds.dataset(
             dataset_path,
             filesystem=s3_fs,
             format="parquet",

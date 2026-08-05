@@ -129,7 +129,7 @@ class LakeWriter:
 
             table = pa.Table.from_pylist(records)
             buf = io.BytesIO()
-            pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
+            pq.write_table(table, buf, compression="snappy")
             buf.seek(0)
 
             key = self._partition_key(

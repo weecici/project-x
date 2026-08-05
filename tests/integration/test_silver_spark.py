@@ -110,7 +110,7 @@ def _setup_buckets_and_data(silver_config: BatchConfig) -> None:
     ]
     table = pa.Table.from_pylist(rows)
     buf = io.BytesIO()
-    pq.write_table(table, buf, compression="snappy")  # type: ignore[no-untyped-call]
+    pq.write_table(table, buf, compression="snappy")
     buf.seek(0)
     s3.put_object(
         Bucket=silver_config.minio_bucket_bronze,
@@ -148,7 +148,7 @@ class TestSilverTransformer:
         total_rows = 0
         for key in silver_keys:
             obj = s3.get_object(Bucket=silver_config.minio_bucket_silver, Key=key)
-            table = pq.read_table(io.BytesIO(obj["Body"].read()))  # type: ignore[no-untyped-call]
+            table = pq.read_table(io.BytesIO(obj["Body"].read()))
             total_rows += table.num_rows
 
         assert total_rows == 2, f"Expected 2 rows after dedup, got {total_rows}"
