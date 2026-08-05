@@ -3,7 +3,7 @@ name = "crypto-platform"
 version = "0.1.0"
 description = "End-to-end crypto analytics platform: live + batch ingestion, lakehouse, OLAP, and ML serving"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
   "apache-airflow>=3.3.0",
   "apache-airflow-providers-fab>=2.4.2",
@@ -15,15 +15,25 @@ dependencies = [
   "gspread>=6.2.1",
   "httpx>=0.28.0",
   "loguru>=0.7.3",
+  "mlflow>=2.15.0",
   "mypy-boto3-s3>=1.43.31",
+  "numba>=0.61.2",
+  "nvidia-ml-py>=13.610.43",
+  "onnx>=1.22.0",
   "openlineage-python>=1.51.0",
-  "pandas>=3.0.3",
-  "pyarrow>=24.0.0",
+  "pandas>=2.2.0,<3.0.0",
+  "pandas-ta>=0.4.71b0",
+  "psutil>=7.2.2",
+  "pyarrow>=15.0.0,<20.0.0",
   "pydantic>=2",
   "pydantic-settings>=2.14.2",
   "pyspark>=3.5.0",
   "rich>=15.0.0",
+  "scikit-learn>=1.9.0",
+  "statsd>=4.0.1",
   "tenacity>=9.1.4",
+  "torch>=2.5.0",
+  "torchvision>=0.20.0",
   "websockets>=16.0",
 ]
 
@@ -37,6 +47,9 @@ stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap  = "streaming.run_vwap:cli"
 export-bi    = "olap.exporter:cli"
 export-lineage = "orchestration.governance.run_lineage:cli"
+feature-eng  = "ml.features.run_feature_eng:main"
+train-model  = "ml.training.run_train:main"
+optimize-model = "ml.optimization.run_optimize:main"
 
 
 [dependency-groups]
@@ -91,3 +104,12 @@ ignore = []
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }

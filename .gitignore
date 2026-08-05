@@ -32,6 +32,7 @@ data/
 # MLflow tracking (Phase 8)
 mlruns/
 mlartifacts/
+mlflow.db
 
 # Spark (Phase 2+)
 derby.log
