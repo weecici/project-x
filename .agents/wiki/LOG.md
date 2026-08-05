@@ -2,6 +2,11 @@
 
 Chronological record of wiki changes. Each entry uses the format: `## [YYYY-MM-DD] action | subject`
 
+## [2026-08-04] phase-8 | ML Pipeline + Optimization
+
+- Created `wiki/decisions/adr-014-ml-pipeline.md` to document the Machine Learning retraining pipeline and dynamic INT8 quantization, pruning, JIT compilation, and ONNX serialization decisions.
+- Updated `wiki/INDEX.md` with ADR-014 links.
+
 ## [2026-07-05] init | Project setup
 
 - Created `GUIDE.md` — full project blueprint (311 lines): crypto market intelligence platform with Kafka/Flink streaming, Spark/dbt batch pipeline, ClickHouse/Doris OLAP, Cube semantic layer, PyTorch model training with Triton/BentoML/FastAPI serving comparison
