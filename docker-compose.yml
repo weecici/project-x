@@ -1,44 +1,7 @@
-# Crypto platform
-
-x-airflow-env: &airflow-env
-  # 1. Airflow Core & Database Authentication
-  AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-  AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /tmp/simple_auth_passwords.json
-
-  # 2. Data Governance & Lineage (OpenLineage)
-  AIRFLOW__OPENLINEAGE__DISABLED: "false"
-  AIRFLOW__OPENLINEAGE__URL: "http://openmetadata:8585/api/v1/openlineage"
-  AIRFLOW__OPENLINEAGE__NAMESPACE: "crypto-platform"
-
-  # 3. Container Inter-Service Endpoints
-  PYTHONPATH: /opt/airflow/app/src
-  CLICKHOUSE_HOST: clickhouse
-  CLICKHOUSE_PORT: "8123"
-  MINIO_ENDPOINT: http://minio:9000
-  CUBE_API_URL: http://cube:4000
-
-  # 4. Task Execution Runtime Paths
-  DBT_LOG_PATH: /tmp/dbt_logs
-  DBT_TARGET_PATH: /tmp/dbt_target
-  DBT_ALLOW_EXPERIMENTAL_ADAPTERS: "true"
-  EXPORT_OUTPUT_DIR: /tmp/exports
-  LINEAGE_OUTPUT_DIR: /tmp/exports
-
-  # 5. PySpark Execution Environment
-  JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-
-  # 6. Airflow Metrics & Observability (StatsD)
-  AIRFLOW__METRICS__STATSD_ON: "true"
-  AIRFLOW__METRICS__STATSD_HOST: statsd-exporter
-  AIRFLOW__METRICS__STATSD_PORT: "8125"
-  AIRFLOW__METRICS__STATSD_PREFIX: airflow
-
 services:
 
   # --------------------------------------------------------------------------
-  # Apache Kafka — KRaft mode, single combined broker/controller node
+  # Apache Kafka
   # --------------------------------------------------------------------------
   kafka:
     image: apache/kafka:4.3.1
@@ -95,7 +58,7 @@ services:
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
-  # Kafka UI — lightweight broker observability
+  # Kafka UI
   # --------------------------------------------------------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
@@ -113,7 +76,7 @@ services:
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
-  # MinIO — S3-compatible local lake storage
+  # MinIO
   # --------------------------------------------------------------------------
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -142,7 +105,7 @@ services:
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
-  # mc-init — one-shot MinIO Client that creates the medallion buckets
+  # MinIO Client to initialize the medallion buckets
   # --------------------------------------------------------------------------
   mc-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
@@ -164,7 +127,7 @@ services:
       - platform-net
 
   # --------------------------------------------------------------------------
-  # ClickHouse — columnar OLAP engine
+  # ClickHouse
   # --------------------------------------------------------------------------
   clickhouse:
     image: clickhouse/clickhouse-server:26.7-alpine
@@ -196,7 +159,7 @@ services:
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
-  # Cube — Semantic Layer
+  # Cube
   # --------------------------------------------------------------------------
   cube:
     image: cubejs/cube:v1.7
@@ -255,39 +218,11 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # --------------------------------------------------------------------------
-  # Apache Airflow — Workflow Orchestration Engine (LocalExecutor)
-  # --------------------------------------------------------------------------
-  airflow:
-    build:
-      context: .
-      dockerfile: infra/airflow/Dockerfile
-    image: crypto-platform-airflow:latest
-    container_name: platform-airflow
-    command: standalone
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8085:8080"   # Airflow Webserver (Host 8085)
-    environment: *airflow-env
-    volumes:
-      - .:/opt/airflow/app
-      - ./src/orchestration/dags:/opt/airflow/dags
-      - ./dbt:/opt/airflow/dbt
-    networks:
-      - platform-net
-    mem_limit: 2048m
-    healthcheck:
-      test: ["CMD", "airflow", "jobs", "check"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+
 
   # --------------------------------------------------------------------------
-  # Phase 7: Observability Stack (Activated via --profile observability)
+  # Data Pipeline Observability (Activated via --profile obs)
+  # Prometheus, Grafana, Loki, Alloy,...
   # --------------------------------------------------------------------------
 
   prometheus:
@@ -437,6 +372,11 @@ services:
     networks:
       - platform-net
     restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # ML Observability (Activated via --profile ml)
+  # MLflow
+  # --------------------------------------------------------------------------
 
   mlflow:
     build:

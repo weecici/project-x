@@ -1,7 +1,20 @@
+export AIRFLOW_HOME := env_var("HOME") + "/.airflow-project-x"
+export PROJECT_ROOT := invocation_directory()
+export AIRFLOW__CORE__DAGS_FOLDER := invocation_directory() + "/src/orchestration/dags"
+export AIRFLOW__CORE__EXECUTOR := "LocalExecutor"
+export AIRFLOW__CORE__LOAD_EXAMPLES := "false"
+export AIRFLOW__DATABASE__SQL_ALCHEMY_CONN := "postgresql+psycopg2://airflow:airflow@localhost:5432/airflow"
+export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS := "admin:ADMIN"
+export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE := env_var("HOME") + "/.airflow-project-x/simple_auth_passwords.json"
+export AIRFLOW__API__PORT := "8085"
+export AIRFLOW__API__BASE_URL := "http://localhost:8085/"
+export AIRFLOW__CORE__EXECUTION_API_SERVER_URL := "http://localhost:8085/execution/"
+
 help:
     @just --list
 
 # ================================================================
+
 
 [group('lint-check')]
 pc:
@@ -101,3 +114,34 @@ down profile="":
 [group('infra')]
 reload-prom:
     curl -X POST http://localhost:9090/-/reload
+
+
+# ================================================================
+
+[group('airflow')]
+airflow-init:
+    #!/usr/bin/env bash
+    mkdir -p "$AIRFLOW_HOME"
+    echo '{"admin": "admin"}' > "$AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"
+    uv run airflow db migrate
+
+[group('airflow')]
+airflow-up:
+    #!/usr/bin/env bash
+    mkdir -p "$AIRFLOW_HOME"
+    echo '{"admin": "admin"}' > "$AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"
+    export PYTHONPATH="{{invocation_directory()}}/src"
+    export DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true
+    export CLICKHOUSE_HOST="localhost"
+    export CLICKHOUSE_PORT="8123"
+    export MINIO_ENDPOINT="http://localhost:9000"
+    export CUBE_API_URL="http://localhost:4000"
+    export MLFLOW_TRACKING_URI="http://localhost:5000"
+    export AWS_ACCESS_KEY_ID="minioadmin"
+    export AWS_SECRET_ACCESS_KEY="minioadmin"
+    export MLFLOW_S3_ENDPOINT_URL="http://localhost:9000"
+    export AIRFLOW__METRICS__STATSD_ON="true"
+    export AIRFLOW__METRICS__STATSD_HOST="localhost"
+    export AIRFLOW__METRICS__STATSD_PORT="8125"
+    export AIRFLOW__METRICS__STATSD_PREFIX="airflow"
+    uv run airflow standalone
