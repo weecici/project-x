@@ -6,6 +6,7 @@ quality assertions, and exports metrics via Cube REST API / Google Sheets.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -19,6 +20,9 @@ from orchestration.governance.run_lineage import main as export_lineage
 
 silver_klines_asset = Asset("s3://silver/klines")
 gold_klines_asset = Asset("clickhouse://gold/fct_daily_klines")
+
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or "./"
+DBT_DIR = os.path.join(PROJECT_ROOT, "dbt")
 
 default_args = {
     "owner": "crypto-platform",
@@ -45,12 +49,14 @@ with DAG(
 
     task_dbt_run = BashOperator(
         task_id="dbt_run_gold",
-        bash_command="cd /opt/airflow/app/dbt && dbt run",
+        bash_command="dbt run",
+        cwd=DBT_DIR,
     )
 
     task_dbt_test = BashOperator(
         task_id="dbt_test_gold",
-        bash_command="cd /opt/airflow/app/dbt && dbt test",
+        bash_command="dbt test",
+        cwd=DBT_DIR,
         outlets=[gold_klines_asset],
     )
 

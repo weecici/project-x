@@ -18,7 +18,7 @@ from ml.features.spark_features import build_spark_session, compute_features
 
 
 @mlflow.trace
-def main() -> None:
+def main(args: list[str] | None = None) -> None:
     """Run the feature engineering pipeline and indicator benchmarks."""
     parser = argparse.ArgumentParser(description="Run Phase 8 Feature Engineering")
     parser.add_argument(
@@ -27,7 +27,7 @@ def main() -> None:
         default=100_000,
         help="Number of data points for Numba indicator benchmark.",
     )
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     config = FeatureConfig()
 
@@ -62,7 +62,7 @@ def main() -> None:
         spark.stop()
 
         logger.info("Running JIT Numba Indicators Benchmark...")
-        run_numba_benchmark(args.n_benchmark_points)
+        run_numba_benchmark(parsed_args.n_benchmark_points)
 
     logger.info("Feature engineering workflow run successfully completed.")
 

@@ -54,7 +54,7 @@ class TestAirflowDAGsValidation:
 
         assert dag is not None
         assert dag.dag_id == "crypto_ml_retrain"
-        assert len(dag.tasks) == 2
+        assert len(dag.tasks) == 4
 
     def test_python_callables_are_synchronous(self) -> None:
         """Verify PythonOperator callables across all DAGs are non-coroutine."""

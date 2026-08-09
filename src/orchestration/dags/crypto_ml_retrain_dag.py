@@ -9,10 +9,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import Asset
 
+from ml.features.run_feature_eng import main as run_feature_eng
+from ml.optimization.run_optimize import main as run_optimize
+from ml.training.run_train import main as run_train
 from orchestration.governance.run_lineage import main as export_lineage
 
 gold_klines_asset = Asset("clickhouse://gold/fct_daily_klines")
@@ -35,16 +37,25 @@ with DAG(
     catchup=False,
     tags=["crypto", "ml", "retrain"],
 ) as dag:
-    task_drift_eval = PythonOperator(
-        task_id="evaluate_feature_drift",
+    task_feature_eng = PythonOperator(
+        task_id="run_feature_engineering",
+        python_callable=run_feature_eng,
+        op_kwargs={"args": []},
+    )
+
+    task_train = PythonOperator(
+        task_id="run_model_training",
+        python_callable=run_train,
+    )
+
+    task_optimize = PythonOperator(
+        task_id="run_model_optimization",
+        python_callable=run_optimize,
+    )
+
+    task_lineage = PythonOperator(
+        task_id="export_lineage_metadata",
         python_callable=export_lineage,
     )
 
-    task_trigger_ml = BashOperator(
-        task_id="trigger_ml_retraining",
-        bash_command=(
-            "echo 'ML retraining event registered for Phase 8 PyTorch execution'"
-        ),
-    )
-
-    task_drift_eval >> task_trigger_ml
+    task_feature_eng >> task_train >> task_optimize >> task_lineage
