@@ -33,6 +33,7 @@ from pyspark.sql.types import (
 )
 
 from batch.config import BatchConfig
+from utils.spark import build_spark_session
 
 # Explicit schema for bronze kline Parquet files produced by the backfill
 # and live writer. Prices/volumes are stored as strings in bronze to
@@ -67,26 +68,14 @@ def _build_spark_session(config: BatchConfig) -> SparkSession:
     Returns:
         A ``SparkSession`` in ``local[*]`` mode with S3A pointing at MinIO.
     """
-    return (
-        SparkSession.builder.appName("crypto-platform-silver-klines")
-        .master("local[*]")
-        .config("spark.driver.memory", config.spark_driver_memory)
-        .config("spark.executor.memory", config.spark_executor_memory)
-        # S3A connector → MinIO
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.2")
-        .config("spark.hadoop.fs.s3a.endpoint", config.minio_endpoint)
-        .config("spark.hadoop.fs.s3a.access.key", config.minio_access_key)
-        .config("spark.hadoop.fs.s3a.secret.key", config.minio_secret_key)
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config(
-            "spark.hadoop.fs.s3a.impl",
-            "org.apache.hadoop.fs.s3a.S3AFileSystem",
-        )
-        # Reduce default shuffle partitions for local single-node runs.
-        .config("spark.sql.shuffle.partitions", "8")
-        # Silence noisy Spark/Hadoop INFO logs.
-        .config("spark.driver.extraJavaOptions", "-Dlog4j.rootCategory=WARN,console")
-        .getOrCreate()
+    return build_spark_session(
+        app_name="crypto-platform-silver-klines",
+        driver_memory=config.spark_driver_memory,
+        executor_memory=config.spark_executor_memory,
+        minio_endpoint=config.minio_endpoint,
+        minio_access_key=config.minio_access_key,
+        minio_secret_key=config.minio_secret_key,
+        shuffle_partitions=8,
     )
 
 

@@ -18,28 +18,20 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
 from ml.features.config import FeatureConfig
+from utils.spark import build_spark_session as common_build_spark_session
 
 
 def build_spark_session(config: FeatureConfig) -> SparkSession:
     """Build and return a PySpark session configured for MinIO access."""
-    return (
-        SparkSession.builder.appName("crypto-platform-feature-eng")
-        .master(config.spark_master)
-        .config("spark.driver.memory", "2g")
-        .config("spark.executor.memory", "2g")
-        # S3A connector → MinIO
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.2")
-        .config("spark.hadoop.fs.s3a.endpoint", config.minio_endpoint)
-        .config("spark.hadoop.fs.s3a.access.key", config.minio_access_key)
-        .config("spark.hadoop.fs.s3a.secret.key", config.minio_secret_key)
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config(
-            "spark.hadoop.fs.s3a.impl",
-            "org.apache.hadoop.fs.s3a.S3AFileSystem",
-        )
-        .config("spark.sql.shuffle.partitions", "4")
-        .config("spark.driver.extraJavaOptions", "-Dlog4j.rootCategory=WARN,console")
-        .getOrCreate()
+    return common_build_spark_session(
+        app_name="crypto-platform-feature-eng",
+        master=config.spark_master,
+        driver_memory="2g",
+        executor_memory="2g",
+        minio_endpoint=config.minio_endpoint,
+        minio_access_key=config.minio_access_key,
+        minio_secret_key=config.minio_secret_key,
+        shuffle_partitions=4,
     )
 
 

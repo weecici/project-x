@@ -20,6 +20,7 @@ from pyspark.sql.types import (
 )
 
 from streaming.config import StreamingConfig
+from utils.spark import build_spark_session as common_build_spark_session
 
 
 def build_spark_session(config: StreamingConfig, app_name: str) -> SparkSession:
@@ -32,33 +33,24 @@ def build_spark_session(config: StreamingConfig, app_name: str) -> SparkSession:
     Returns:
         A configured SparkSession instance.
     """
-    return (
-        SparkSession.builder.appName(app_name)
-        .master("local[*]")
-        .config("spark.driver.memory", config.spark_driver_memory)
-        .config("spark.executor.memory", config.spark_executor_memory)
-        # Packages: Kafka support, S3A filesystem connector, and Delta Lake
-        .config(
-            "spark.jars.packages",
-            "org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.2,"
-            "org.apache.hadoop:hadoop-aws:3.4.2,"
+    return common_build_spark_session(
+        app_name=app_name,
+        driver_memory=config.spark_driver_memory,
+        executor_memory=config.spark_executor_memory,
+        minio_endpoint=config.minio_endpoint,
+        minio_access_key=config.minio_access_key,
+        minio_secret_key=config.minio_secret_key,
+        shuffle_partitions=4,
+        additional_packages=[
+            "org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.2",
             "io.delta:delta-spark_4.1_2.13:4.3.1",
-        )
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-        # MinIO S3A settings
-        .config("spark.hadoop.fs.s3a.endpoint", config.minio_endpoint)
-        .config("spark.hadoop.fs.s3a.access.key", config.minio_access_key)
-        .config("spark.hadoop.fs.s3a.secret.key", config.minio_secret_key)
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        # Optimization: low partition count for fast local development
-        .config("spark.sql.shuffle.partitions", "4")
-        .config("spark.driver.extraJavaOptions", "-Dlog4j.rootCategory=WARN,console")
-        .getOrCreate()
+        ],
+        spark_config={
+            "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension",
+            "spark.sql.catalog.spark_catalog": (
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+            ),
+        },
     )
 
 
