@@ -94,6 +94,7 @@ uv run export-lineage # Build OpenMetadata JSON lineage graph
 | Transforms | dbt, dbt-clickhouse |
 | Orchestration | Apache Airflow (LocalExecutor), PostgreSQL |
 | Observability | Prometheus, Grafana, Loki, Alloy, AlertManager |
+| ML | PyTorch (LSTM), MLflow, Numba JIT, ONNX, pandas-ta |
 | Validation | Pydantic v2 |
 | Infrastructure | Docker Compose |
 | Testing | pytest, testcontainers |
@@ -116,6 +117,10 @@ src/
 └── orchestration/   # Airflow DAGs + lineage governance
     ├── dags/        # DAG definitions (backfill, olap, ml-retrain)
     └── governance/  # Lineage manifest compiler
+└── ml/              # ML pipeline (Phase 8)
+    ├── features/    # PySpark + Pandas UDF + Numba JIT feature engineering
+    ├── training/    # CryptoLSTM training with MLflow + StatsD
+    └── optimization/# Pruning, quantization, ONNX, benchmarking
 
 cube/
 ├── model/
@@ -129,7 +134,8 @@ dbt/
 └── macros/          # Schema naming overrides
 
 infra/
-├── airflow/         # Airflow Dockerfile
+├── airflow/         # Airflow Dockerfile (legacy, now native Python)
+├── mlflow/          # MLflow tracking server Dockerfile
 └── observability/   # Prometheus, Grafana, Loki, Alloy, AlertManager configs
     ├── alertmanager/
     ├── alloy/
@@ -186,6 +192,9 @@ just up              # Start infrastructure
 just down            # Stop infrastructure
 just obs-up          # Start observability stack
 just obs-down        # Stop observability stack
+just feature-eng     # Run feature engineering
+just train           # Train LSTM model
+just optimize        # Run model optimization
 ```
 
 ## Current Status
@@ -199,7 +208,7 @@ just obs-down        # Stop observability stack
 | 5 | Semantic Layer + BI | Done |
 | 6 | Orchestration + Governance | Done |
 | 7 | Observability | Done |
-| 8 | ML Pipeline | Planned |
+| 8 | ML Pipeline | Done |
 | 9 | ML Serving | Planned |
 | 10 | CI/CD + Deploy | Planned |
 
