@@ -89,8 +89,10 @@ flowchart TB
         ALERT["AlertManager\n(alerts)"]
     end
 
-    subgraph FUTURE["Future Phases"]
-        ML["ML Pipeline\n(PyTorch + MLflow)"]
+    subgraph ML["ML Pipeline (Phase 8)"]
+        FEAT["Feature Engineering\n(PySpark + Numba JIT)"]
+        TRAIN["CryptoLSTM Training\n(PyTorch + MLflow)"]
+        OPT["Optimization\n(pruning, quantization, ONNX)"]
     end
 
     WS --> PROD --> KAFKA
@@ -107,12 +109,13 @@ flowchart TB
     CUBE -.-> AIRFLOW
     AIRFLOW --> LINEAGE
 
-    DBT -.-> ML
+    DBT --> FEAT
+    FEAT --> TRAIN
+    TRAIN --> OPT
 
     PROM -.-> GRAF
     LOKI -.-> GRAF
 
-    style FUTURE fill:#f0f0f0,stroke:#999,stroke-dasharray: 5 5
     style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
     style OBS fill:#e8f5e9,stroke:#2e7d32,stroke-dasharray: 5 5
 ```
@@ -128,7 +131,7 @@ flowchart TB
 | 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } Complete |
 | 6 | Orchestration + Governance | :material-check-circle:{ style="color: green" } Complete |
 | 7 | Observability | :material-check-circle:{ style="color: green" } Complete |
-| 8 | ML Pipeline + Optimization | :material-circle-outline: Planned |
+| 8 | ML Pipeline + Optimization | :material-check-circle:{ style="color: green" } Complete |
 | 9 | ML Serving (3-way) | :material-circle-outline: Planned |
 | 10 | CI/CD + Deploy + Polish | :material-circle-outline: Planned |
 

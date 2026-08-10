@@ -263,6 +263,83 @@ uv run stream-vwap
 
 ---
 
+## `feature-eng`
+
+Run the ML feature engineering pipeline.
+
+```bash
+uv run feature-eng
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | MinIO silver klines (Parquet) + CSV seed data |
+| **Output** | MinIO gold feature matrix + MLflow metrics |
+| **Config** | `SYMBOLS`, `KLINE_INTERVALS`, `MINIO_*`, `SPARK_*`, `MLFLOW_*` env vars |
+
+**What it does:**
+
+1. Connects to MinIO and reads silver-layer kline Parquet data
+2. Computes technical indicators via Numba JIT (EMA, RSI, MACD) with up to 97x speedup
+3. Adds rolling statistics (SMA, volatility), lagged returns, and target labels
+4. Joins BTC dominance and Fear & Greed features where available
+5. Applies standard scaling to feature matrix
+6. Writes gold Parquet to MinIO and logs metrics to MLflow
+
+---
+
+## `train-model`
+
+Train the CryptoLSTM price direction prediction model.
+
+```bash
+uv run train-model
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | MinIO gold feature matrix (Parquet) |
+| **Output** | Registered MLflow model + benchmark metrics |
+| **Config** | `SYMBOLS`, `MINIO_*`, `MLFLOW_*`, `TRAINING_*` env vars |
+
+**What it does:**
+
+1. Loads gold feature Parquet from MinIO into a PyTorch Dataset
+2. Builds sequence windows (N, 60, 11) with temporal train/val split
+3. Initializes CryptoLSTM (stacked LSTM + Dropout + Linear head)
+4. Trains with Adam optimizer, BCE loss, mixed precision (AMP), early stopping
+5. Logs metrics, parameters, and model artifacts to MLflow
+6. Registers as Champion/Challenger in MLflow Model Registry
+7. Exports ONNX model and saves benchmark results
+
+---
+
+## `optimize-model`
+
+Optimize a trained model for production deployment.
+
+```bash
+uv run optimize-model
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Input** | MLflow registered model (champion or challenger) |
+| **Output** | Optimized ONNX model + benchmark report |
+| **Config** | `MLFLOW_*`, `OPTIMIZATION_*`, `ONNX_*` env vars |
+
+**What it does:**
+
+1. Fetches the latest model from MLflow Model Registry
+2. Runs torch.compile optimization (reduce-overhead mode)
+3. Exports to ONNX format (opset 17) for cross-platform deployment
+4. Applies global L1 unstructured pruning (30% sparsity) + fine-tuning
+5. Applies dynamic INT8 quantization (5.07MB -> 1.29MB, ~74% size reduction)
+6. Benchmarks all 4 variants (Baseline, JIT, Pruned, Quantized) for latency and accuracy
+7. Writes optimized models + benchmark CSV/JSON to MinIO artifacts
+
+---
+
 ## Justfile Shortcuts
 
 The `justfile` provides shortcut recipes for all commands:
@@ -278,6 +355,9 @@ The `justfile` provides shortcut recipes for all commands:
 | `just stream-vwap` | `uv run stream-vwap` | Start VWAP streaming job |
 | `just export-bi` | `uv run export-bi` | Export Cube → CSV + Google Sheets |
 | `just export-lineage` | `uv run export-lineage` | Export lineage manifest |
+| `just feature-eng` | `uv run feature-eng` | Run ML feature engineering |
+| `just train` | `uv run train-model` | Train CryptoLSTM model |
+| `just optimize` | `uv run optimize-model` | Run model optimization |
 | `just dbt-deps` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt deps` | Install dbt packages |
 | `just dbt-run` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt run` | Run all dbt models |
 | `just dbt-test` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt test` | Run all dbt tests |
@@ -291,6 +371,8 @@ The `justfile` provides shortcut recipes for all commands:
 | `just obs-up` | `docker compose --profile observability up -d` | Start observability stack |
 | `just obs-down` | `docker compose --profile observability down` | Stop observability stack |
 | `just obs-reload-prometheus` | `curl -X POST http://localhost:9090/-/reload` | Hot-reload Prometheus config |
+| `just mlflow-up` | `docker compose --profile ml up -d mlflow` | Start MLflow server |
+| `just mlflow-down` | `docker compose --profile ml down` | Stop MLflow server |
 
 ---
 
@@ -309,6 +391,9 @@ stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap = "streaming.run_vwap:cli"
 export-bi = "olap.exporter:cli"
 export-lineage = "orchestration.governance.run_lineage:cli"
+feature-eng = "ml.features.run_feature_eng:cli"
+train-model = "ml.training.run_train:cli"
+optimize-model = "ml.optimization.run_optimize:cli"
 ```
 
 Each `run_*.py` module contains a `cli()` function that:

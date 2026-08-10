@@ -24,9 +24,14 @@ Expected services:
 | Kafka UI | 8080 | Web UI |
 | MinIO | 9000, 9001 | S3 storage + console |
 | ClickHouse | 8123, 9009 | OLAP database |
-| PostgreSQL | 5432 | Airflow metadata DB |
-| Airflow | 8085 | Workflow orchestration |
 | mc-init | — | Bucket creation (one-shot) |
+
+Airflow is now running natively via Python (not Docker):
+
+```bash
+just airflow-init    # Initialize Airflow metadata DB + admin user
+just airflow-up      # Start Airflow webserver + scheduler
+```
 
 Start observability stack (optional):
 
@@ -224,6 +229,94 @@ The streaming jobs:
 - Only the VWAP job uses event-time watermarking (10s default); OHLCV is a filter-and-cast pipeline
 - Delta Lake provides ACID transactions on MinIO
 
+## ML Pipeline (Phase 8)
+
+### Feature Engineering
+
+Compute technical indicators from silver kline data:
+
+```bash
+uv run feature-eng
+```
+
+Or via just shortcut:
+
+```bash
+just feature-eng
+```
+
+The feature engineering pipeline:
+
+1. Reads silver-layer kline Parquet from MinIO
+2. Computes technical indicators via Numba JIT (EMA, RSI, MACD) with up to 97x speedup
+3. Adds rolling statistics (SMA, volatility), lagged returns, and target labels
+4. Joins BTC dominance and Fear & Greed features where available
+5. Applies standard scaling to feature matrix
+6. Writes gold Parquet to MinIO and logs metrics to MLflow
+
+### Model Training
+
+Train the CryptoLSTM price direction prediction model:
+
+```bash
+uv run train-model
+```
+
+Or via just shortcut:
+
+```bash
+just train
+```
+
+The training pipeline:
+
+1. Loads gold feature Parquet from MinIO into a PyTorch Dataset
+2. Builds sequence windows (N, 60, 11) with temporal train/val split
+3. Initializes CryptoLSTM (stacked LSTM + Dropout + Linear head)
+4. Trains with Adam optimizer, BCE loss, mixed precision (AMP), early stopping
+5. Logs metrics, parameters, and model artifacts to MLflow
+6. Registers as Champion/Challenger in MLflow Model Registry
+7. Exports ONNX model and saves benchmark results
+
+### Model Optimization
+
+Optimize a trained model for production deployment:
+
+```bash
+uv run optimize-model
+```
+
+Or via just shortcut:
+
+```bash
+just optimize
+```
+
+The optimization pipeline:
+
+1. Fetches the latest model from MLflow Model Registry
+2. Runs torch.compile optimization (reduce-overhead mode)
+3. Exports to ONNX format (opset 17) for cross-platform deployment
+4. Applies global L1 unstructured pruning (30% sparsity) + fine-tuning
+5. Applies dynamic INT8 quantization (5.07MB -> 1.29MB, ~74% size reduction)
+6. Benchmarks all 4 variants (Baseline, JIT, Pruned, Quantized) for latency and accuracy
+7. Writes optimized models + benchmark CSV/JSON to MinIO artifacts
+
+### MLflow UI
+
+Start the MLflow tracking server (Docker):
+
+```bash
+docker compose --profile ml up -d mlflow
+```
+
+Open [http://localhost:5000](http://localhost:5000) to:
+
+- View experiment runs and metrics
+- Compare model performance across runs
+- Download trained models and artifacts
+- Manage Champion/Challenger model aliases
+
 ## Monitoring
 
 ### Kafka UI
@@ -337,6 +430,11 @@ uv run stream-vwap &
 
 # 8. Export lineage manifest
 uv run export-lineage
+
+# 9. ML Pipeline (Phase 8)
+just feature-eng      # or: uv run feature-eng
+just train            # or: uv run train-model
+just optimize         # or: uv run optimize-model
 ```
 
 ### Re-run Silver Transformation

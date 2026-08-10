@@ -56,8 +56,10 @@ flowchart TB
         ALLOY["Alloy\nlog collector"]
     end
 
-    subgraph FUTURE["Future Phases"]
-        ML["ML Pipeline\nFeature store + model serving"]
+    subgraph ML["ML Pipeline (Phase 8)"]
+        FEAT["Feature Engineering\n(PySpark + Numba JIT)"]
+        TRAIN["CryptoLSTM Training\n(PyTorch + MLflow)"]
+        OPT["Optimization\n(pruning, quantization, ONNX)"]
     end
 
     WS --> PROD --> KAFKA
@@ -82,13 +84,14 @@ flowchart TB
     CUBE -.-> AIRFLOW
     AIRFLOW --> LINEAGE
 
-    DBT -.-> ML
+    DBT --> FEAT
+    FEAT --> TRAIN
+    TRAIN --> OPT
 
     PROM -.-> GRAF
     LOKI -.-> GRAF
     ALLOY -.-> LOKI
 
-    style FUTURE fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5
     style ORCH fill:#fff3e0,stroke:#e65100,stroke-dasharray: 5 5
     style OBS fill:#e8f5e9,stroke:#2e7d32,stroke-dasharray: 5 5
 ```
@@ -163,8 +166,11 @@ The platform organizes data in three tiers:
 | Cube.js | Cube.js | `cube/` | Semantic layer (metrics + views) |
 | Airflow | Apache Airflow | `src/orchestration/dags/` | Workflow orchestration |
 | Lineage compiler | OpenLineage | `src/orchestration/governance/` | Data lineage manifest |
+| Feature engineering | PySpark + Numba JIT | `src/ml/features/` | Silver → gold feature pipeline |
+| Model training | PyTorch + MLflow | `src/ml/training/` | CryptoLSTM training + tracking |
+| Model optimization | PyTorch + ONNX | `src/ml/optimization/` | Pruning, quantization, benchmarking |
 | Prometheus | `prom/prometheus` | `infra/observability/prometheus/` | Metrics collection + alerting |
-| Grafana | `grafana/grafana` | `infra/observability/grafana/` | Dashboards (infra, host, ML stub) |
+| Grafana | `grafana/grafana` | `infra/observability/grafana/` | Dashboards (infra, host, ML metrics) |
 | Loki | `grafana/loki` | `infra/observability/loki/` | Log aggregation (7-day retention) |
 | Alloy | `grafana/alloy` | `infra/observability/alloy/` | Docker log collector |
 | AlertManager | `prom/alertmanager` | `infra/observability/alertmanager/` | Alert routing |
@@ -192,4 +198,5 @@ The platform organizes data in three tiers:
 | cAdvisor | 8083 | Per-container metrics |
 | node-exporter | 9100 | Host hardware metrics |
 | statsd-exporter | 9102 | Airflow StatsD → Prometheus bridge |
+| MLflow | 5000 | ML experiment tracking + model registry |
 | Alloy | 12345 | Docker log collection |

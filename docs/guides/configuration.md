@@ -139,6 +139,7 @@ CLICKHOUSE_TABLE_KLINES=klines_raw
 | node-exporter | 9100 | Host hardware metrics |
 | statsd-exporter | 9102 | Airflow StatsD bridge |
 | Alloy | 12345 | Docker log collection |
+| MLflow | 5000 | ML experiment tracking + model registry |
 
 ## Streaming
 
@@ -193,3 +194,46 @@ AIRFLOW_URL=http://localhost:8085
 OPENLINEAGE_NAMESPACE=crypto-platform
 LINEAGE_OUTPUT_DIR=.exports
 ```
+
+## ML Configuration
+
+These control the ML feature engineering, training, and optimization pipelines.
+
+### Feature Engineering
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `FEATURE_SYMBOLS` | `list[str]` | `["BTCUSDT"]` | Symbols to generate features for |
+| `FEATURE_INTERVAL` | `str` | `1m` | Kline interval for feature data |
+| `FEATURE_LOOKBACK` | `int` | `100000` | Number of historical klines to load |
+| `FEATURE_OUTPUT_PATH` | `str` | `s3a://gold/features/` | Output path for feature Parquet |
+
+### Training
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `TRAINING_EPOCHS` | `int` | `50` | Number of training epochs |
+| `TRAINING_LEARNING_RATE` | `float` | `0.001` | Adam optimizer learning rate |
+| `TRAINING_BATCH_SIZE` | `int` | `32` | Batch size for DataLoader |
+| `TRAINING_HIDDEN_SIZE` | `int` | `128` | LSTM hidden dimension |
+| `TRAINING_NUM_LAYERS` | `int` | `2` | Number of stacked LSTM layers |
+| `TRAINING_DROPOUT` | `float` | `0.3` | Dropout between LSTM layers |
+| `TRAINING_PATIENCE` | `int` | `10` | Early stopping patience (epochs) |
+
+### Optimization
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `OPTIMIZATION_PRUNE_AMOUNT` | `float` | `0.30` | L1 unstructured pruning ratio (0.0–1.0) |
+| `OPTIMIZATION_QUANTIZE` | `bool` | `true` | Enable dynamic INT8 quantization |
+| `OPTIMIZATION_COMPILE` | `bool` | `true` | Enable `torch.compile` optimization |
+| `OPTIMIZATION_EXPORT_ONNX` | `bool` | `true` | Export model to ONNX format |
+| `OPTIMIZATION_BENCHMARK_SAMPLES` | `int` | `1000` | Number of forward passes for benchmarking |
+
+### MLflow Tracking
+
+| Env Var | Type | Default | Description |
+|---------|------|---------|-------------|
+| `MLFLOW_TRACKING_URI` | `str` | `http://localhost:5000` | MLflow tracking server URL |
+| `MLFLOW_EXPERIMENT_NAME` | `str` | `crypto-lstm` | MLflow experiment name |
+| `MLFLOW_S3_ENDPOINT_URL` | `str` | `http://localhost:9000` | MinIO S3 endpoint for MLflow artifacts |

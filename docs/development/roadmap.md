@@ -13,7 +13,7 @@
 | 5 | Semantic Layer + BI | :material-check-circle:{ style="color: green" } | Cube.js metrics API, BI exporter, Tableau |
 | 6 | Orchestration + Governance | :material-check-circle:{ style="color: green" } | Airflow DAGs, lineage compiler, OpenLineage |
 | 7 | Observability | :material-check-circle:{ style="color: green" } | Prometheus, Grafana, Loki, Alloy, alerting |
-| 8 | ML Pipeline + Optimization | :material-clock-outline: | Feature store, training, Optuna |
+| 8 | ML Pipeline + Optimization | :material-check-circle:{ style="color: green" } | Feature eng, LSTM training, quantization, pruning |
 | 9 | ML Serving (3-way) | :material-clock-outline: | BentoML + TorchScript + Triton |
 | 10 | CI/CD + Deploy + Polish | :material-clock-outline: | Docker Swarm, K8s, monitoring |
 
@@ -124,13 +124,33 @@
 
 ### Phase 8 — ML Pipeline + Optimization
 
-**Status**: :material-clock-outline: Planned
+**Status**: :material-check-circle: Complete
 
-- [ ] Feature store (time-series features)
-- [ ] PyTorch LSTM model
-- [ ] Optuna hyperparameter optimization
-- [ ] MLflow experiment tracking
-- [ ] GPU training (RTX 3050 Ti)
+- [x] `src/utils/spark.py` — shared `build_spark_session()` extracted from batch/streaming
+- [x] `FeatureConfig` (Pydantic Settings) — symbols, seq_length, target_horizon, MinIO, MLflow
+- [x] PySpark batch feature engineering pipeline (`spark_features.py`)
+  - Reads silver Parquet from MinIO, computes SMA-20/50, Volatility-20 via Spark window functions
+  - Vectorized Pandas UDF (`applyInPandas`) computes RSI-14, MACD(12,26,9), Bollinger Bands, log returns, target direction
+  - Standard scaling on 50K sample, writes gold features to `s3a://gold/ml_features/`
+- [x] Numba JIT indicators (`numba_indicators.py`) — EMA, RSI, MACD with up to 97x speedup
+- [x] Numba vs pandas-ta benchmark with MLflow logging
+- [x] PyTorch `CryptoDataset` — sliding window sequences (N, 60, 11), standard scaling, temporal split
+- [x] `TrainingConfig` — LSTM hidden_size=256, num_layers=3, dropout=0.3, epochs=30, AMP on CUDA
+- [x] `CryptoLSTM` architecture — stacked LSTM + Dropout + Linear classifier head, orthogonal/Xavier init
+- [x] Training loop with mixed precision (AMP), StatsD metrics, MLflow tracking
+- [x] Champion-Challenger model registry management (auto-promote if challenger wins)
+- [x] `OptimizationConfig` — model_alias="champion", prune_amount=0.30
+- [x] `torch.compile` (reduce-overhead mode) + ONNX export (opset 17)
+- [x] Global L1 unstructured pruning (30%) + fine-tuning recovery
+- [x] Dynamic INT8 quantization (5.07MB → 1.29MB, ~74% reduction)
+- [x] Benchmark harness — 4 variants (Baseline, JIT, Pruned, Quantized), size + latency + accuracy
+- [x] MLflow model logging with signature + artifact export
+- [x] `feature-eng`, `train-model`, `optimize-model` CLI entry points
+- [x] `just feature-eng`, `just train`, `just optimize` recipes
+- [x] MLflow Docker service (port 5000, PostgreSQL backend + MinIO artifacts)
+- [x] Airflow moved from Docker to native Python execution (`just airflow-up`)
+- [x] Unit tests: config validation, Numba correctness, model architecture, dataset generation
+- [x] ADR-014 documenting ML pipeline decisions
 
 ### Phase 9 — ML Serving (3-way)
 

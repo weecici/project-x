@@ -117,7 +117,8 @@ src/
 │   ├── __init__.py
 │   ├── logging.py                  # Structured JSON + console logging
 │   ├── retry.py                    # @async_retry decorator (exponential backoff)
-│   └── storage.py                  # s3_factory() → minio.MinIO
+│   ├── storage.py                  # s3_factory() → minio.MinIO
+│   └── spark.py                    # build_spark_session() shared SparkSession
 ├── ingestion/                      # Phase 1: Live data pipeline
 │   ├── __init__.py
 │   ├── config.py                   # IngestionConfig (Pydantic Settings)
@@ -156,6 +157,29 @@ src/
 │       ├── __init__.py
 │       ├── ohlcv_stream.py         # Kline OHLCV streaming job
 │       └── vwap_stream.py          # VWAP + microstructure metrics job
+├── ml/                             # Phase 8: ML pipeline
+│   ├── __init__.py
+│   ├── features/
+│   │   ├── __init__.py
+│   │   ├── config.py               # FeatureConfig (Pydantic Settings)
+│   │   ├── dataset.py              # PyTorch CryptoDataset
+│   │   ├── numba_indicators.py     # Numba JIT EMA, RSI, MACD indicators
+│   │   ├── run_feature_eng.py      # Entry point: feature-eng command
+│   │   └── spark_features.py       # PySpark batch feature pipeline
+│   ├── training/
+│   │   ├── __init__.py
+│   │   ├── config.py               # TrainingConfig (Pydantic Settings)
+│   │   ├── model.py                # CryptoLSTM architecture
+│   │   ├── run_train.py            # Entry point: train-model command
+│   │   └── trainer.py              # MLflow-tracked training loop
+│   └── optimization/
+│       ├── __init__.py
+│       ├── benchmark.py            # ModelBenchmark + OptimizationResult
+│       ├── compile_model.py        # torch.compile wrapper
+│       ├── config.py               # OptimizationConfig (Pydantic Settings)
+│       ├── prune_model.py          # Structured pruning
+│       ├── quantize_model.py       # Dynamic INT8 quantization
+│       └── run_optimize.py         # Entry point: optimize-model command
 └── orchestration/                  # Phase 6: Workflow orchestration + governance
     ├── __init__.py
     ├── config.py                   # OrchestrationConfig, GovernanceConfig (Pydantic Settings)

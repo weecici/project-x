@@ -23,6 +23,11 @@ tests/
 │   │   ├── test_orchestration_config.py # OrchestrationConfig + GovernanceConfig
 │   │   ├── test_dags_validation.py     # DAG structure validation (3 DAGs)
 │   │   └── test_lineage.py             # Lineage manifest builder
+│   ├── ml/
+│   │   ├── test_ml_config.py           # FeatureConfig, TrainingConfig, OptimizationConfig
+│   │   ├── test_numba_indicators.py    # Numba JIT EMA, RSI, MACD correctness
+│   │   ├── test_model.py               # CryptoLSTM architecture + forward pass
+│   │   └── test_dataset.py             # CryptoDataset + DataLoader
 │   ├── observability/
 │   │   ├── test_prometheus_config.py   # Prometheus scrape configs + rules
 │   │   ├── test_loki_config.py         # Loki + AlertManager config validity

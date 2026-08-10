@@ -34,6 +34,13 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **tenacity** | 9.x | Retry library | Exponential backoff, configurable retries |
 | **boto3** | 1.43+ | AWS SDK | S3-compatible operations |
 | **python-dotenv** | 1.x | `.env` file loading | Standard `.env` file support |
+| **PyTorch** | 2.x | Deep learning framework | LSTM model training, CUDA RTX 3050 Ti support |
+| **MLflow** | 2.x | Experiment tracking | Experiment logging, model registry, artifact storage |
+| **Numba** | 0.61+ | JIT compilation | EMA, RSI, MACD acceleration (up to 97x speedup) |
+| **pandas-ta** | 0.3+ | Technical indicators | RSI, MACD, Bollinger Bands as Pandas UDFs |
+| **onnx** | 1.17+ | Model serialization | Cross-platform model export |
+| **scikit-learn** | 1.6+ | ML utilities | Standard scaling, train/test splitting |
+| **psutil** | 6.x | System monitoring | Training resource metrics logging |
 
 ## Infrastructure
 
@@ -47,6 +54,7 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **Cube.js** | `cubejs/cube` | Semantic layer | Metrics API on ClickHouse gold tables, pre-aggregations |
 | **PostgreSQL** | `postgres:alpine` | Airflow metadata DB | Lightweight, 256MB cap, enables LocalExecutor |
 | **Apache Airflow** | `apache/airflow:latest` | Workflow orchestration | DAG-based scheduling, Dynamic Task Mapping, asset-driven triggers |
+| **MLflow** | `ghcr.io/mlflow/mlflow:v2.21.3` | ML experiment tracking | Tracking server + PostgreSQL backend + MinIO artifacts |
 | **Prometheus** | `prom/prometheus:latest` | Metrics collection + TSDB | 15s scrape interval, 7 scrape jobs, alert rules |
 | **Grafana** | `grafana/grafana:latest` | Dashboards + alerting | Dashboard-as-code (`allowUiUpdates: false`), provisioned datasources |
 | **Loki** | `grafana/loki:latest` | Log aggregation | Filesystem TSDB, schema v13, 7-day retention |
