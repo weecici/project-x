@@ -4,7 +4,7 @@
 
 Crypto market intelligence platform: ingest live + historical crypto data, build a lakehouse, serve analytics via OLAP + semantic layer, train/optimize/serve a price-movement model.
 
-**Current state**: Phase 7 complete. Phase 8 (ML Pipeline + Optimization) next.
+**Current state**: Phase 8 complete. Phase 9 (ML Serving) next.
 
 ## Machine Spec
 - Total RAM: 14 GB / **~7–8 GB usable** (IDE + browser consume ~6 GB at rest)
@@ -73,26 +73,27 @@ just mypy           # mypy
 
 ## Architecture
 
-Phase 1 to 7 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
+Phase 1 to 8 complete (see `.agents/wiki/structure/project-structure.md` for full layout):
 
 ```
 src/ingestion/              → Binance WS → Kafka producer + Kafka → MinIO lake writer
 src/batch/                  → REST historical backfill → bronze; PySpark silver transformer
-src/utils/                  → shared cross-phase utilities (logging, retry, S3 factory)
+src/utils/                  → shared cross-phase utilities (logging, retry, S3 factory, spark session)
 src/olap/                   → ClickHouse database loader + Cube REST exporter
 dbt/                        → silver → gold SQL models (dbt + ClickHouse)
 src/streaming/              → PySpark Structured Streaming (OHLCV, VWAP, metrics) → silver (Delta Lake)
 cube/                       → Cube semantic layer models + configuration
 src/orchestration/          → Airflow DAGs (backfill, olap-serving, ml-retrain) + lineage manifest compiler
+src/ml/                     → features (PySpark + Numba JIT), training (LSTM + MLflow), optimization (pruning, quantization, ONNX)
 infra/observability/        → Prometheus, Grafana, Loki, Alloy, AlertManager configs + dashboards
 tests/                      → unit / integration (testcontainers) / e2e
-.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-013)
+.agents/wiki/decisions/     → Architecture Decision Records (ADR-001 through ADR-014)
 ```
 
 **Planned** (future phases):
 ```
-src/ml/              → features, training, optimization, serving (Phases 8–9)
-infra/               → Docker Swarm + K8s manifests (Phase 10)
+src/ml/serving/            → Triton, BentoML, FastAPI serving (Phase 9)
+infra/                     → Docker Swarm + K8s manifests (Phase 10)
 ```
 
 Follow the 10-phase build order in `.agents/wiki/structure/phase.md`.

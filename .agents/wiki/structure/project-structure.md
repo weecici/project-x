@@ -31,7 +31,8 @@ crypto-platform/
 │   │   ├── __init__.py
 │   │   ├── logging.py                    # configure_logging() — loguru JSON
 │   │   ├── retry.py                      # async_retry() — tenacity backoff
-│   │   └── storage.py                    # make_s3_client() — boto3 factory
+│   │   ├── storage.py                    # make_s3_client() — boto3 factory
+│   │   └── spark.py                      # build_spark_session() — shared PySpark session
 │   │
 │   ├── ingestion/                        # Phase 1 — Binance WS → Kafka → MinIO
 │   │   ├── __init__.py
@@ -71,14 +72,29 @@ crypto-platform/
 │   │       ├── ohlcv_stream.py           # Spark structured streaming job for OHLCV
 │   │       └── vwap_stream.py            # Spark structured streaming job for VWAP / microstructure metrics
 │   │
-│   ├── ml/                               # Phases 8–9 — ML pipeline and serving
+│   ├── ml/                               # Phase 8 — ML pipeline (features, training, optimization)
+│   │   ├── __init__.py
 │   │   ├── features/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py                 # FeatureConfig (Pydantic Settings)
+│   │   │   ├── dataset.py                # PyTorch CryptoDataset + DataLoader
+│   │   │   ├── numba_indicators.py       # Numba JIT EMA, RSI, MACD indicators
+│   │   │   ├── run_feature_eng.py        # CLI entrypoint: uv run feature-eng
+│   │   │   └── spark_features.py         # PySpark batch feature pipeline
 │   │   ├── training/
-│   │   ├── optimization/
-│   │   └── serving/
-│   │       ├── triton_repo/
-│   │       ├── bento_service/
-│   │       └── fastapi_gateway/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py                 # TrainingConfig (Pydantic Settings)
+│   │   │   ├── model.py                  # CryptoLSTM architecture (stacked LSTM + Dropout + Linear)
+│   │   │   ├── run_train.py              # CLI entrypoint: uv run train-model
+│   │   │   └── trainer.py                # MLflow-tracked training loop (AMP, early stopping)
+│   │   └── optimization/
+│   │       ├── __init__.py
+│   │       ├── benchmark.py              # ModelBenchmark + OptimizationResult
+│   │       ├── compile_model.py          # torch.compile wrapper (reduce-overhead)
+│   │       ├── config.py                 # OptimizationConfig (Pydantic Settings)
+│   │       ├── prune_model.py            # Structured pruning (L1 magnitude)
+│   │       ├── quantize_model.py         # Dynamic INT8 quantization
+│   │       └── run_optimize.py           # CLI entrypoint: uv run optimize-model
 │   │
 │   └── orchestration/                    # Phase 6 — Airflow Orchestration & OpenMetadata Governance
 │       ├── __init__.py
@@ -167,14 +183,19 @@ crypto-platform/
 │   │   │   ├── test_batch_config.py
 │   │   │   ├── test_batch_models.py
 │   │   │   └── test_binance_rest.py
-│   │   └── olap/
-│   │       └── test_olap_config.py
-│   │   └── semantic/
-│   │       └── test_semantic_config.py
+│   │   ├── olap/
+│   │   │   └── test_olap_config.py
+│   │   ├── semantic/
+│   │   │   └── test_semantic_config.py
 │   │   ├── orchestration/
 │   │   │   ├── test_orchestration_config.py
 │   │   │   ├── test_dags_validation.py
 │   │   │   └── test_lineage.py
+│   │   ├── ml/
+│   │   │   ├── test_ml_config.py
+│   │   │   ├── test_numba_indicators.py
+│   │   │   ├── test_model.py
+│   │   │   └── test_dataset.py
 │   │   └── observability/
 │   │       ├── test_prometheus_config.py
 │   │       ├── test_loki_config.py
@@ -211,7 +232,8 @@ crypto-platform/
         │   ├── adr-010-pyspark-structured-streaming.md
         │   ├── adr-011-cube-semantic-layer.md
         │   ├── adr-012-orchestration-governance.md
-        │   └── adr-013-observability.md
+        │   ├── adr-013-observability.md
+        │   └── adr-014-ml-pipeline.md
         └── structure/
             ├── phase.md
             └── project-structure.md
