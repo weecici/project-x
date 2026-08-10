@@ -118,8 +118,8 @@
 - [x] Prometheus recording rules (5 rules for dashboard queries)
 - [x] Grafana provisioning: datasources (Prometheus, Loki, AlertManager), dashboards, alerting contact points
 - [x] AlertManager routing + dedup config
-- [x] Docker Compose profile `observability` (~912 MB total)
-- [x] `just obs-up`, `just obs-down`, `just obs-reload-prometheus` recipes
+- [x] Docker Compose profile `obs` (~912 MB total)
+- [x] `just up obs`, `just down obs`, `just reload-prom` recipes
 - [x] Unit tests (Prometheus, Loki, Grafana provisioning configs)
 
 ### Phase 8 — ML Pipeline + Optimization

@@ -353,7 +353,6 @@ The `justfile` provides shortcut recipes for all commands:
 | `just load-olap` | `uv run load-olap` | Load silver → ClickHouse |
 | `just stream-ohlcv` | `uv run stream-ohlcv` | Start OHLCV streaming job |
 | `just stream-vwap` | `uv run stream-vwap` | Start VWAP streaming job |
-| `just export-bi` | `uv run export-bi` | Export Cube → CSV + Google Sheets |
 | `just export-lineage` | `uv run export-lineage` | Export lineage manifest |
 | `just feature-eng` | `uv run feature-eng` | Run ML feature engineering |
 | `just train` | `uv run train-model` | Train CryptoLSTM model |
@@ -361,18 +360,20 @@ The `justfile` provides shortcut recipes for all commands:
 | `just dbt-deps` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt deps` | Install dbt packages |
 | `just dbt-run` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt run` | Run all dbt models |
 | `just dbt-test` | `cd dbt && DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true uv run dbt test` | Run all dbt tests |
-| `just pc` | `uv run pre-commit run` | Run pre-commit hooks |
-| `just check` | `uv run ruff check .` | Lint code |
+| `just pc` | `uv run pre-commit run --all-files` | Run pre-commit hooks |
+| `just check` | `uv run ruff check . --fix --exit-non-zero-on-fix` | Lint code |
 | `just format` | `uv run ruff format .` | Format code |
 | `just mypy` | `uv run mypy .` | Type check |
 | `just docs` | `uv run mkdocs serve` | Serve docs locally |
 | `just up` | `docker compose up -d` | Start all infrastructure |
+| `just up obs` | `docker compose --profile obs up -d` | Start observability stack |
+| `just up ml` | `docker compose --profile ml up -d mlflow` | Start MLflow server |
 | `just down` | `docker compose down` | Stop all infrastructure |
-| `just obs-up` | `docker compose --profile observability up -d` | Start observability stack |
-| `just obs-down` | `docker compose --profile observability down` | Stop observability stack |
-| `just obs-reload-prometheus` | `curl -X POST http://localhost:9090/-/reload` | Hot-reload Prometheus config |
-| `just mlflow-up` | `docker compose --profile ml up -d mlflow` | Start MLflow server |
-| `just mlflow-down` | `docker compose --profile ml down` | Stop MLflow server |
+| `just down obs` | `docker compose --profile obs down` | Stop observability stack |
+| `just down ml` | `docker compose --profile ml down` | Stop MLflow server |
+| `just reload-prom` | `curl -X POST http://localhost:9090/-/reload` | Hot-reload Prometheus config |
+| `just airflow-init` | Airflow DB migrate + create admin user | Initialize Airflow |
+| `just airflow-up` | `uv run airflow standalone` | Start Airflow webserver + scheduler |
 
 ---
 
@@ -391,9 +392,9 @@ stream-ohlcv = "streaming.run_ohlcv:cli"
 stream-vwap = "streaming.run_vwap:cli"
 export-bi = "olap.exporter:cli"
 export-lineage = "orchestration.governance.run_lineage:cli"
-feature-eng = "ml.features.run_feature_eng:cli"
-train-model = "ml.training.run_train:cli"
-optimize-model = "ml.optimization.run_optimize:cli"
+feature-eng = "ml.features.run_feature_eng:main"
+train-model = "ml.training.run_train:main"
+optimize-model = "ml.optimization.run_optimize:main"
 ```
 
 Each `run_*.py` module contains a `cli()` function that:

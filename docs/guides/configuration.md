@@ -128,18 +128,21 @@ CLICKHOUSE_TABLE_KLINES=klines_raw
 | ClickHouse HTTP | 8123 | HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | Native TCP (internal replication) |
 | ClickHouse Prometheus | 9363 | Native metrics endpoint |
-| Airflow | 8085 | Airflow webserver (LocalExecutor) |
-| PostgreSQL | 5432 | Airflow metadata database |
-| Prometheus | 9090 | Metrics collection + TSDB |
-| Grafana | 3000 | Dashboards + alerting UI |
-| Loki | 3100 | Log aggregation |
-| AlertManager | 9093 | Alert routing |
-| kafka-exporter | 9308 | Kafka consumer lag metrics |
-| cAdvisor | 8083 | Per-container metrics |
-| node-exporter | 9100 | Host hardware metrics |
-| statsd-exporter | 9102 | Airflow StatsD bridge |
-| Alloy | 12345 | Docker log collection |
-| MLflow | 5000 | ML experiment tracking + model registry |
+| PostgreSQL | 5432 | Airflow + MLflow metadata database |
+| Prometheus | 9090 | Metrics collection + TSDB (`--profile obs`) |
+| Grafana | 3000 | Dashboards + alerting UI (`--profile obs`) |
+| Loki | 3100 | Log aggregation (`--profile obs`) |
+| AlertManager | 9093 | Alert routing (`--profile obs`) |
+| kafka-exporter | 9308 | Kafka consumer lag metrics (`--profile obs`) |
+| cAdvisor | 8083 | Per-container metrics (`--profile obs`) |
+| node-exporter | 9100 | Host hardware metrics (`--profile obs`) |
+| statsd-exporter | 9102 | Airflow StatsD bridge (`--profile obs`) |
+| Alloy | 12345 | Docker log collection (`--profile obs`) |
+| MLflow | 5000 | ML experiment tracking + model registry (`--profile ml`) |
+
+!!! note "Airflow runs natively"
+    Airflow is **not** a Docker service. It runs via `just airflow-init` + `just airflow-up` (Python-native `LocalExecutor`).
+    Port 8085 is served by the native uvicorn process, not a container.
 
 ## Streaming
 
@@ -198,42 +201,54 @@ LINEAGE_OUTPUT_DIR=.exports
 ## ML Configuration
 
 These control the ML feature engineering, training, and optimization pipelines.
+All config classes extend `pydantic_settings.BaseSettings` — env vars override defaults.
 
-### Feature Engineering
+### Feature Engineering (`src/ml/features/config.py`)
 
-| Env Var | Type | Default | Description |
-|---------|------|---------|-------------|
-| `FEATURE_SYMBOLS` | `list[str]` | `["BTCUSDT"]` | Symbols to generate features for |
-| `FEATURE_INTERVAL` | `str` | `1m` | Kline interval for feature data |
-| `FEATURE_LOOKBACK` | `int` | `100000` | Number of historical klines to load |
-| `FEATURE_OUTPUT_PATH` | `str` | `s3a://gold/features/` | Output path for feature Parquet |
+| Field | Env Var | Type | Default | Description |
+|-------|---------|------|---------|-------------|
+| `symbols` | `SYMBOLS` | `list[str]` | `["BTCUSDT", "ETHUSDT"]` | Symbols to generate features for |
+| `seq_length` | `SEQ_LENGTH` | `int` | `60` | Sequence lookback window length |
+| `target_horizon` | `TARGET_HORIZON` | `int` | `1` | Prediction horizon in kline steps |
+| `minio_endpoint` | `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO endpoint |
+| `minio_access_key` | `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `minio_secret_key` | `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `minio_bucket_silver` | `MINIO_BUCKET_SILVER` | `str` | `silver` | Silver bucket name |
+| `minio_bucket_gold` | `MINIO_BUCKET_GOLD` | `str` | `gold` | Gold bucket name |
+| `spark_master` | `SPARK_MASTER` | `str` | `local[*]` | Spark master URL |
+| `mlflow_tracking_uri` | `MLFLOW_TRACKING_URI` | `str` | `http://localhost:5000` | MLflow tracking server |
+| `mlflow_experiment_name` | `MLFLOW_EXPERIMENT_NAME` | `str` | `crypto_price_direction` | MLflow experiment name |
 
-### Training
+### Training (`src/ml/training/config.py`)
 
-| Env Var | Type | Default | Description |
-|---------|------|---------|-------------|
-| `TRAINING_EPOCHS` | `int` | `50` | Number of training epochs |
-| `TRAINING_LEARNING_RATE` | `float` | `0.001` | Adam optimizer learning rate |
-| `TRAINING_BATCH_SIZE` | `int` | `32` | Batch size for DataLoader |
-| `TRAINING_HIDDEN_SIZE` | `int` | `128` | LSTM hidden dimension |
-| `TRAINING_NUM_LAYERS` | `int` | `2` | Number of stacked LSTM layers |
-| `TRAINING_DROPOUT` | `float` | `0.3` | Dropout between LSTM layers |
-| `TRAINING_PATIENCE` | `int` | `10` | Early stopping patience (epochs) |
+| Field | Env Var | Type | Default | Description |
+|-------|---------|------|---------|-------------|
+| `hidden_size` | `HIDDEN_SIZE` | `int` | `256` | LSTM hidden dimension |
+| `num_layers` | `NUM_LAYERS` | `int` | `3` | Number of stacked LSTM layers |
+| `dropout` | `DROPOUT` | `float` | `0.3` | Dropout rate in LSTM layers |
+| `seq_length` | `SEQ_LENGTH` | `int` | `60` | Input sequence lookback length |
+| `batch_size` | `BATCH_SIZE` | `int` | `64` | Training batch size |
+| `epochs` | `EPOCHS` | `int` | `30` | Number of training epochs |
+| `lr` | `LR` | `float` | `0.001` | Adam optimizer learning rate |
+| `model_name` | `MODEL_NAME` | `str` | `crypto_lstm` | MLflow model registry name |
+| `device` | `DEVICE` | `str` | `cuda` | Execution target (`cuda` or `cpu`) |
+| `mlflow_tracking_uri` | `MLFLOW_TRACKING_URI` | `str` | `http://localhost:5000` | MLflow tracking server |
+| `mlflow_experiment_name` | `MLFLOW_EXPERIMENT_NAME` | `str` | `crypto_price_direction` | MLflow experiment name |
+| `statsd_host` | `STATSD_HOST` | `str` | `localhost` | StatsD host for Prometheus metrics |
+| `statsd_port` | `STATSD_PORT` | `int` | `8125` | StatsD port |
+| `statsd_prefix` | `STATSD_PREFIX` | `str` | `ml_training` | StatsD metric prefix |
 
-### Optimization
+### Optimization (`src/ml/optimization/config.py`)
 
-| Env Var | Type | Default | Description |
-|---------|------|---------|-------------|
-| `OPTIMIZATION_PRUNE_AMOUNT` | `float` | `0.30` | L1 unstructured pruning ratio (0.0–1.0) |
-| `OPTIMIZATION_QUANTIZE` | `bool` | `true` | Enable dynamic INT8 quantization |
-| `OPTIMIZATION_COMPILE` | `bool` | `true` | Enable `torch.compile` optimization |
-| `OPTIMIZATION_EXPORT_ONNX` | `bool` | `true` | Export model to ONNX format |
-| `OPTIMIZATION_BENCHMARK_SAMPLES` | `int` | `1000` | Number of forward passes for benchmarking |
-
-### MLflow Tracking
-
-| Env Var | Type | Default | Description |
-|---------|------|---------|-------------|
-| `MLFLOW_TRACKING_URI` | `str` | `http://localhost:5000` | MLflow tracking server URL |
-| `MLFLOW_EXPERIMENT_NAME` | `str` | `crypto-lstm` | MLflow experiment name |
-| `MLFLOW_S3_ENDPOINT_URL` | `str` | `http://localhost:9000` | MinIO S3 endpoint for MLflow artifacts |
+| Field | Env Var | Type | Default | Description |
+|-------|---------|------|---------|-------------|
+| `model_name` | `MODEL_NAME` | `str` | `crypto_lstm` | MLflow model registry name |
+| `model_alias` | `MODEL_ALIAS` | `str` | `champion` | MLflow registry alias to load |
+| `prune_amount` | `PRUNE_AMOUNT` | `float` | `0.30` | Fraction of weights to prune (0.0–1.0) |
+| `device` | `DEVICE` | `str` | `cpu` | Execution target for optimization |
+| `minio_endpoint` | `MINIO_ENDPOINT` | `str` | `http://localhost:9000` | MinIO endpoint |
+| `minio_access_key` | `MINIO_ACCESS_KEY` | `str` | `minioadmin` | MinIO access key |
+| `minio_secret_key` | `MINIO_SECRET_KEY` | `str` | `minioadmin` | MinIO secret key |
+| `minio_bucket_gold` | `MINIO_BUCKET_GOLD` | `str` | `gold` | Gold bucket name |
+| `seq_length` | `SEQ_LENGTH` | `int` | `60` | Sequence lookback length |
+| `output_dir` | `OUTPUT_DIR` | `Path` | `.exports` | Output directory for artifacts |

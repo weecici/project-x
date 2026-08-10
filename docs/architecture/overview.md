@@ -188,15 +188,18 @@ The platform organizes data in three tiers:
 | ClickHouse HTTP | 8123 | ClickHouse HTTP interface (OLAP queries, dbt) |
 | ClickHouse TCP | 9009 | ClickHouse native TCP (internal replication) |
 | ClickHouse Prometheus | 9363 | ClickHouse native metrics endpoint |
-| Airflow | 8085 | Airflow webserver (LocalExecutor) |
-| PostgreSQL | 5432 | Airflow metadata database |
-| Prometheus | 9090 | Metrics collection + TSDB |
-| Grafana | 3000 | Dashboards + alerting UI |
-| Loki | 3100 | Log aggregation (7-day retention) |
-| AlertManager | 9093 | Alert routing + deduplication |
-| kafka-exporter | 9308 | Kafka consumer lag metrics |
-| cAdvisor | 8083 | Per-container metrics |
-| node-exporter | 9100 | Host hardware metrics |
-| statsd-exporter | 9102 | Airflow StatsD → Prometheus bridge |
-| MLflow | 5000 | ML experiment tracking + model registry |
-| Alloy | 12345 | Docker log collection |
+| PostgreSQL | 5432 | Airflow + MLflow metadata database |
+| Prometheus | 9090 | Metrics collection + TSDB (`--profile obs`) |
+| Grafana | 3000 | Dashboards + alerting UI (`--profile obs`) |
+| Loki | 3100 | Log aggregation, 7-day retention (`--profile obs`) |
+| AlertManager | 9093 | Alert routing + deduplication (`--profile obs`) |
+| kafka-exporter | 9308 | Kafka consumer lag metrics (`--profile obs`) |
+| cAdvisor | 8083 | Per-container metrics (`--profile obs`) |
+| node-exporter | 9100 | Host hardware metrics (`--profile obs`) |
+| statsd-exporter | 9102 | Airflow StatsD → Prometheus bridge (`--profile obs`) |
+| MLflow | 5000 | ML experiment tracking + model registry (`--profile ml`) |
+| Alloy | 12345 | Docker log collection (`--profile obs`) |
+
+!!! note "Airflow runs natively"
+    Airflow is **not** a Docker service. It runs via `just airflow-init` + `just airflow-up`
+    (Python-native `LocalExecutor` on port 8085).

@@ -118,7 +118,7 @@ sequenceDiagram
     Loader->>Loader: Project + cast to _SILVER_SCHEMA
     Loader->>CH: client.insert_arrow(silver.klines_raw, table)
 
-    Note over dbt: Triggered via uv run dbt run
+    Note over dbt: Triggered via just dbt-run
 
     dbt->>CH: CREATE VIEW silver.stg_crypto__klines AS ... FINAL
     dbt->>CH: CREATE TABLE gold.fct_daily_klines AS ... GROUP BY

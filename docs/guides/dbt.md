@@ -59,8 +59,6 @@ All connection details are sourced from `CLICKHOUSE_*` environment variables. Se
 ### Install Dependencies
 
 ```bash
-uv run dbt deps
-# or via just
 just dbt-deps
 ```
 
@@ -69,8 +67,6 @@ This installs `dbt-labs/dbt_utils` (used for `generate_surrogate_key`).
 ### Run All Models
 
 ```bash
-uv run dbt run
-# or via just
 just dbt-run
 ```
 
@@ -82,8 +78,6 @@ This materializes:
 ### Run Tests
 
 ```bash
-uv run dbt test
-# or via just
 just dbt-test
 ```
 
@@ -92,11 +86,11 @@ Runs all `not_null`, `unique`, and `expression_is_true` tests defined in the YAM
 ### Combined
 
 ```bash
-uv run dbt run && uv run dbt test
+just dbt-run && just dbt-test
 ```
 
 !!! note "Experimental adapter"
-    All dbt commands use `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true` because `dbt-clickhouse` is marked as experimental.
+    All dbt commands use `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true` (set automatically in justfile) because `dbt-clickhouse` is marked as experimental.
 
 ## Models
 

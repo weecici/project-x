@@ -36,7 +36,7 @@ just airflow-up      # Start Airflow webserver + scheduler
 Start observability stack (optional):
 
 ```bash
-just obs-up    # or: docker compose --profile observability up -d
+just up obs    # or: docker compose --profile obs up -d
 ```
 
 This adds 9 services: Prometheus, Grafana, Loki, Alloy, AlertManager, kafka-exporter, cAdvisor, node-exporter, statsd-exporter.
@@ -173,23 +173,14 @@ The loader will:
 Install dbt dependencies, then run all models:
 
 ```bash
-# Install dbt packages (dbt_utils)
-uv run dbt deps
-
-# Run all models (staging + marts)
-uv run dbt run
-
-# Run tests
-uv run dbt test
+just dbt-deps         # Install dbt packages
+just dbt-run          # Run all models (staging + marts)
+just dbt-test         # Run dbt tests
 ```
 
-Or via just shortcuts:
-
-```bash
-just dbt-deps
-just dbt-run
-just dbt-test
-```
+!!! note
+    These justfile recipes handle `cd dbt` and set `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true` automatically.
+    Running `uv run dbt run` directly from the project root will fail without these.
 
 The dbt run will:
 
@@ -365,7 +356,7 @@ Set `*_LOG_LEVEL=DEBUG` for verbose output.
 
 ### Grafana Dashboards
 
-Start the observability stack first (`just obs-up`), then open [http://localhost:3000](http://localhost:3000) (login: `admin` / `admin`):
+Start the observability stack first (`just up obs`), then open [http://localhost:3000](http://localhost:3000) (login: `admin` / `admin`):
 
 - **Platform Infrastructure Health** — Kafka consumer lag, ClickHouse query threads, container memory/CPU
 - **Host Hardware & Node Metrics** — Host CPU utilization, RAM usage
@@ -380,7 +371,7 @@ Open [http://localhost:9090](http://localhost:9090) to:
 - View all scrape targets and their health
 - Run PromQL queries against collected metrics
 - Inspect active alerting rules
-- Hot-reload config: `just obs-reload-prometheus`
+- Hot-reload config: `just reload-prom`
 
 ### Loki Logs
 
@@ -420,9 +411,9 @@ uv run silver
 uv run load-olap
 
 # 6. Build gold tables
-uv run dbt deps
-uv run dbt run
-uv run dbt test
+just dbt-deps
+just dbt-run
+just dbt-test
 
 # 7. Start streaming (Terminal 3 + 4)
 uv run stream-ohlcv &
@@ -459,7 +450,7 @@ ClickHouse ReplacingMergeTree ensures idempotent loads (dedup on background merg
 
 ```bash
 # Re-run all models
-uv run dbt run
+just dbt-run
 ```
 
 dbt models are idempotent — re-running produces the same result.

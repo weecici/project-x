@@ -52,9 +52,9 @@ Every tool and library used in the platform, with version, purpose, and rational
 | **ClickHouse** | `clickhouse/clickhouse-server:head-alpine` | OLAP database | Columnar analytics, ReplacingMergeTree dedup, fast inserts |
 | **mc-init** | `minio/mc` | Bucket initialization | Creates bronze/silver/gold buckets on startup |
 | **Cube.js** | `cubejs/cube` | Semantic layer | Metrics API on ClickHouse gold tables, pre-aggregations |
-| **PostgreSQL** | `postgres:alpine` | Airflow metadata DB | Lightweight, 256MB cap, enables LocalExecutor |
-| **Apache Airflow** | `apache/airflow:latest` | Workflow orchestration | DAG-based scheduling, Dynamic Task Mapping, asset-driven triggers |
-| **MLflow** | `ghcr.io/mlflow/mlflow:v2.21.3` | ML experiment tracking | Tracking server + PostgreSQL backend + MinIO artifacts |
+| **PostgreSQL** | `postgres:alpine` | Airflow + MLflow metadata DB | Lightweight, 256MB cap |
+| **Apache Airflow** | *(native Python)* | Workflow orchestration | DAG-based scheduling, LocalExecutor, runs via `just airflow-up` |
+| **MLflow** | `ghcr.io/mlflow/mlflow:v2.21.3` | ML experiment tracking | Tracking server + PostgreSQL backend + MinIO artifacts (`--profile ml`) |
 | **Prometheus** | `prom/prometheus:latest` | Metrics collection + TSDB | 15s scrape interval, 7 scrape jobs, alert rules |
 | **Grafana** | `grafana/grafana:latest` | Dashboards + alerting | Dashboard-as-code (`allowUiUpdates: false`), provisioned datasources |
 | **Loki** | `grafana/loki:latest` | Log aggregation | Filesystem TSDB, schema v13, 7-day retention |

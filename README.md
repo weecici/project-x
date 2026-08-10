@@ -50,108 +50,48 @@ flowchart TB
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/yourusername/crypto-platform.git
-cd crypto-platform
+git clone https://github.com/weecici/project-x
+cd project-x
 uv sync
 
 # 2. Start infrastructure
 docker compose up -d
 
 # 3. Run the live pipeline
-uv run produce        # Terminal 1: WS → Kafka
-uv run write-lake     # Terminal 2: Kafka → MinIO
+just produce          # WS → Kafka
+just write-lake       # Kafka → MinIO
 
 # 4. Run batch pipeline
-uv run backfill       # Historical data → bronze
-uv run silver         # Bronze → silver transformation
+just backfill         # Historical data → bronze
+just silver           # Bronze → silver transformation
 
 # 5. Load into ClickHouse
-uv run load-olap      # Silver → ClickHouse
+just load-olap        # Silver → ClickHouse
 
 # 6. Build gold tables
-uv run dbt deps       # Install dbt packages
-uv run dbt run        # Run all dbt models
-uv run dbt test       # Run dbt tests
+just dbt-deps         # Install dbt packages (sets DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true)
+just dbt-run          # Run all dbt models
+just dbt-test         # Run dbt tests
 
-# 7. Start streaming (Terminal 3 + 4)
-uv run stream-ohlcv   # Kafka → OHLCV Delta + Kafka
-uv run stream-vwap    # Kafka → VWAP Delta + Kafka
+# 7. Start streaming
+just stream-ohlcv     # Kafka → OHLCV Delta + Kafka
+just stream-vwap      # Kafka → VWAP Delta + Kafka
 
 # 8. Export lineage manifest
-uv run export-lineage # Build OpenMetadata JSON lineage graph
-```
+just export-lineage   # Build OpenMetadata JSON lineage graph
 
-## Tech Stack
+# 9. ML Pipeline
+just feature-eng      # Feature engineering (PySpark + Numba JIT)
+just train            # Train CryptoLSTM (PyTorch + MLflow)
+just optimize         # Model optimization (pruning, quantization, ONNX)
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Python 3.13, uv |
-| Streaming | Apache Kafka (KRaft), confluent-kafka, PySpark Structured Streaming |
-| Batch | PySpark, httpx |
-| Storage | MinIO (S3-compatible), Parquet, Delta Lake |
-| OLAP | ClickHouse, clickhouse-connect |
-| Semantic | Cube.js, gspread, pandas |
-| Transforms | dbt, dbt-clickhouse |
-| Orchestration | Apache Airflow (LocalExecutor), PostgreSQL |
-| Observability | Prometheus, Grafana, Loki, Alloy, AlertManager |
-| ML | PyTorch (LSTM), MLflow, Numba JIT, ONNX, pandas-ta |
-| Validation | Pydantic v2 |
-| Infrastructure | Docker Compose |
-| Testing | pytest, testcontainers |
-| Linting | ruff, mypy --strict |
+# 10. Orchestration (optional)
+just airflow-init     # Initialize Airflow metadata DB
+just airflow-up       # Start Airflow webserver + scheduler
 
-## Project Structure
-
-```
-src/
-├── utils/           # Shared utilities (logging, retry, storage)
-├── ingestion/       # Live WS → Kafka → MinIO pipeline
-│   ├── producer/    # WebSocket → Kafka producer
-│   └── writer/      # Kafka → MinIO lake writer
-├── batch/           # REST backfill + PySpark silver transformer
-│   ├── backfill/    # Binance REST client
-│   └── silver/      # PySpark transformer
-├── olap/            # ClickHouse loader + BI exporter
-├── streaming/       # PySpark Structured Streaming
-│   └── jobs/        # OHLCV + VWAP streaming jobs
-└── orchestration/   # Airflow DAGs + lineage governance
-    ├── dags/        # DAG definitions (backfill, olap, ml-retrain)
-    └── governance/  # Lineage manifest compiler
-└── ml/              # ML pipeline (Phase 8)
-    ├── features/    # PySpark + Pandas UDF + Numba JIT feature engineering
-    ├── training/    # CryptoLSTM training with MLflow + StatsD
-    └── optimization/# Pruning, quantization, ONNX, benchmarking
-
-cube/
-├── model/
-│   ├── cubes/       # Cube.js cube definitions (daily, hourly, returns)
-│   └── views/       # Public views (ohlcv_daily, ohlcv_hourly, price_analytics)
-
-dbt/
-├── models/
-│   ├── staging/     # Silver → staging views
-│   └── marts/       # Gold aggregated tables
-└── macros/          # Schema naming overrides
-
-infra/
-├── airflow/         # Airflow Dockerfile (legacy, now native Python)
-├── mlflow/          # MLflow tracking server Dockerfile
-└── observability/   # Prometheus, Grafana, Loki, Alloy, AlertManager configs
-    ├── alertmanager/
-    ├── alloy/
-    ├── grafana/
-    │   ├── dashboards/   # Platform infra, host resources, ML serving stub
-    │   └── provisioning/ # Datasources, dashboards, alerting
-    ├── loki/
-    └── prometheus/
-        └── rules/        # Alert + recording rules
-
-tableau/             # Tableau connection files
-
-tests/
-├── unit/            # Fast, no Docker
-├── integration/     # Docker required (testcontainers)
-└── e2e/             # Full stack
+# Optional profiles
+# just up obs          # Start observability (Prometheus, Grafana, Loki, Alloy, AlertManager)
+# just up ml           # Start MLflow tracking server
 ```
 
 ## Documentation
@@ -187,30 +127,30 @@ just check           # Lint
 just format          # Format
 just mypy            # Type check
 just docs            # Serve docs
-just export-lineage  # Export lineage manifest
-just up              # Start infrastructure
+just up              # Start infrastructure, add `ml` or `obs` to activate the corresponding profile
 just down            # Stop infrastructure
-just obs-up          # Start observability stack
-just obs-down        # Stop observability stack
-just feature-eng     # Run feature engineering
-just train           # Train LSTM model
-just optimize        # Run model optimization
+just airflow-init    # Initialize Airflow database
+just airflow-up      # Start the Airflow UI
 ```
 
-## Current Status
+## Tech Stack
 
-| Phase | Name | Status |
-|:-----:|------|:------:|
-| 1 | Foundation + Ingestion | Done |
-| 2 | Batch + Lake Maturation | Done |
-| 3 | OLAP + dbt | Done |
-| 4 | Stream Processing | Done |
-| 5 | Semantic Layer + BI | Done |
-| 6 | Orchestration + Governance | Done |
-| 7 | Observability | Done |
-| 8 | ML Pipeline | Done |
-| 9 | ML Serving | Planned |
-| 10 | CI/CD + Deploy | Planned |
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Python 3.13, uv |
+| Streaming | Apache Kafka (KRaft), confluent-kafka, PySpark Structured Streaming |
+| Batch | PySpark, httpx |
+| Storage | MinIO (S3-compatible), Parquet, Delta Lake |
+| OLAP | ClickHouse, clickhouse-connect |
+| Semantic | Cube.js, gspread, pandas |
+| Transforms | dbt, dbt-clickhouse |
+| Orchestration | Apache Airflow (LocalExecutor), PostgreSQL |
+| Observability | Prometheus, Grafana, Loki, Alloy, AlertManager |
+| ML | PyTorch (LSTM), MLflow, Numba JIT, ONNX, pandas-ta |
+| Validation | Pydantic v2 |
+| Infrastructure | Docker Compose |
+| Testing | pytest, testcontainers |
+| Linting | ruff, mypy --strict |
 
 ## License
 
